@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AI Kernel — Memory Layer</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { background:#0d1117; color:#e6edf3; font-family: -apple-system,Segoe UI,sans-serif; margin:0; padding:32px; }
+  h1 { font-weight:600; font-size:22px; margin:0 0 4px; }
+  .sub { color:#8b949e; font-size:13px; margin-bottom:24px; }
+  .mermaid { background:#161b22; border-radius:10px; padding:28px; }
+</style>
+</head>
+<body>
+<h1>AI Kernel — Memory Layer (MVP)</h1>
+<div class="sub">Two-tier storage · flat + inverted index · triage as unified decider · swappable agent engine</div>
+
+<div class="mermaid">
+flowchart TB
+  subgraph STORAGE["Storage (two tiers, canonical)"]
+    direction LR
+    REPO["repo/.ai/memory/<br/>scope: repo"]
+    GLOBAL["AI_KERNEL_HOME/memory/<br/>scope: global"]
+  end
+
+  subgraph SHADOW["Shadow sources (deviation only)"]
+    direction LR
+    SERENA[".serena/memories/"]
+    CLAUDE[".claude/projects/*/memory/"]
+  end
+
+  INDEX[("index.json<br/>flat cards + inverted<br/>by_tag / by_term / by_scope")]
+  CONFIG["config.yaml<br/>roots · agents · triage · hooks"]
+
+  INDEXER["ai-kernel-index<br/>tier 0 · bash"]
+  SCANNER["ai-kernel-scan<br/>tier 0 · deviation report"]
+  SUGGEST["ai-kernel-suggest<br/>PreToolUse hook"]
+
+  TRIAGE{{"ai-kernel-triage<br/><b>THE DECIDER</b><br/>task.json to decision.json<br/>max_self_spend: tier 1"}}
+
+  AGENT["ai-kernel-agent<br/>engine swap-point<br/>reads agents.tier.cmd"]
+
+  subgraph TIERS["Tiered backends (config-driven)"]
+    direction LR
+    T0["tier 0<br/>bash"]
+    T1["tier 1<br/>Ollama"]
+    T2["tier 2<br/>Haiku"]
+    T3["tier 3<br/>Sonnet"]
+    T4["tier 4<br/>Opus"]
+  end
+
+  ENGINE(["claude -p / codex exec / qwen chat<br/>swappable"])
+
+  ORCH["future orchestrator<br/>v3+ seam only"]
+
+  REPO --> INDEXER
+  GLOBAL --> INDEXER
+  INDEXER --> INDEX
+
+  SERENA --> SCANNER
+  CLAUDE --> SCANNER
+  REPO --> SCANNER
+  GLOBAL --> SCANNER
+
+  CONFIG -.reads.-> INDEXER
+  CONFIG -.reads.-> SCANNER
+  CONFIG -.reads.-> SUGGEST
+  CONFIG -.reads.-> TRIAGE
+  CONFIG -.reads.-> AGENT
+
+  SCANNER -- "task.json" --> TRIAGE
+  SUGGEST -- "task.json" --> TRIAGE
+  ORCH -. "task.json" .-> TRIAGE
+
+  INDEX --> TRIAGE
+  INDEX --> SUGGEST
+
+  TRIAGE -- "decision.json" --> AGENT
+  TRIAGE -- "surface_cards nudge" --> SUGGEST
+
+  AGENT --> T0
+  AGENT --> T1
+  AGENT --> T2
+  AGENT --> T3
+  AGENT --> T4
+  T2 --> ENGINE
+  T3 --> ENGINE
+  T4 --> ENGINE
+
+  classDef storage fill:#1f6feb22,stroke:#58a6ff,color:#e6edf3
+  classDef index fill:#3fb95022,stroke:#3fb950,color:#e6edf3
+  classDef config fill:#d2991d22,stroke:#e3b341,color:#e6edf3
+  classDef script fill:#161b22,stroke:#6e7681,color:#e6edf3
+  classDef triage fill:#a371f722,stroke:#a371f7,color:#e6edf3,stroke-width:3px
+  classDef agent fill:#db61a222,stroke:#db61a2,color:#e6edf3
+  classDef tier fill:#161b22,stroke:#484f58,color:#8b949e
+  classDef engine fill:#1f6feb22,stroke:#1f6feb,color:#e6edf3
+  classDef future fill:#161b22,stroke:#6e7681,color:#8b949e,stroke-dasharray: 5 5
+
+  class REPO,GLOBAL,SERENA,CLAUDE storage
+  class INDEX index
+  class CONFIG config
+  class INDEXER,SCANNER,SUGGEST script
+  class TRIAGE triage
+  class AGENT agent
+  class T0,T1,T2,T3,T4 tier
+  class ENGINE engine
+  class ORCH future
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: { fontFamily:'-apple-system,Segoe UI,sans-serif', fontSize:'13px' },
+    flowchart: { curve:'basis', padding:18, nodeSpacing:40, rankSpacing:55 }
+  });
+</script>
+</body>
+</html>

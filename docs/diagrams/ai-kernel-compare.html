@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>AI Kernel — Legacy vs Memory-Layer MVP</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { background:#0d1117; color:#e6edf3; font-family: -apple-system,Segoe UI,sans-serif; margin:0; padding:24px; }
+  h1 { font-weight:600; font-size:20px; margin:0 0 20px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .panel { background:#161b22; border-radius:10px; padding:20px; }
+  .panel h2 { margin:0 0 4px; font-size:15px; font-weight:600; }
+  .panel .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; }
+  .legacy .tag { background:#6e768122; color:#8b949e; border:1px solid #6e7681; }
+  .new .tag { background:#3fb95022; color:#3fb950; border:1px solid #3fb950; }
+  .panel .caption { color:#8b949e; font-size:12px; margin-bottom:14px; }
+  .mermaid { font-size:12px; }
+  .footer { margin-top:18px; background:#161b22; border-radius:10px; padding:16px 20px; font-size:12px; color:#c9d1d9; }
+  .footer b { color:#e6edf3; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  td, th { padding:6px 10px; border-bottom:1px solid #30363d; text-align:left; vertical-align:top; }
+  th { color:#8b949e; font-weight:500; font-size:11px; }
+</style>
+</head>
+<body>
+
+<h1>AI Kernel — Legacy (submodule scaffolder) vs. Memory-Layer MVP</h1>
+
+<div class="row">
+
+<div class="panel legacy">
+  <h2>Legacy <span class="tag">parked under /legacy</span></h2>
+  <div class="caption">"Rails for Claude Code workflows, distributed via submodule." Install-time Go CLI + shared prompt scaffolding. No memory substrate.</div>
+  <div class="mermaid">
+flowchart TB
+  GH["github.com/eugenelai-elmo/ai-kernel<br/>(base repo, submoduled into consumers)"]
+  CLI["Go CLI<br/>init / detect / check / update<br/>install-time only"]
+  subgraph CONSUMER["consumer repo (e.g. elmo-application)"]
+    direction TB
+    CMD[".ai/CLAUDE.md<br/>2-line pointer"]
+    BASE[".ai/base/ (submodule)<br/>CLAUDE.md · substrate · loops · templates"]
+    OVER[".ai/loops/execution.md<br/>.ai/tool-overrides.md<br/><i>overlays from detect</i>"]
+    REPI[".ai/repo-intelligence.md<br/><i>hand-written freeform blob</i>"]
+    ART[".ai/artifacts/active/ISSUE/<br/>state.json · brief · plan · verification"]
+  end
+  AGENT["agent session"]
+  EXT["Serena memories<br/>+ decisions.csv<br/>+ handoff files"]
+
+  GH -. "git submodule add" .-> BASE
+  CLI -- "scaffolds" --> CMD
+  CLI -- "auto-generates" --> OVER
+  CLI -. "stub" .-> REPI
+
+  AGENT -- "reads on boot" --> CMD
+  CMD --> BASE
+  CMD --> REPI
+  BASE -- "overlay precedence" --> OVER
+  AGENT -- "produces" --> ART
+  AGENT -. "memory outsourced" .-> EXT
+
+  classDef loc fill:#1f6feb22,stroke:#58a6ff,color:#e6edf3
+  classDef cli fill:#d2991d22,stroke:#e3b341,color:#e6edf3
+  classDef legacy fill:#161b22,stroke:#484f58,color:#c9d1d9
+  classDef ext fill:#6e768122,stroke:#8b949e,color:#8b949e,stroke-dasharray:4 3
+  class GH loc
+  class CLI cli
+  class CMD,BASE,OVER,REPI,ART legacy
+  class EXT ext
+  class AGENT legacy
+  </div>
+</div>
+
+<div class="panel new">
+  <h2>Memory-Layer MVP <span class="tag">current</span></h2>
+  <div class="caption">Single repo, bash scripts, flat+inverted index, triage as unified decider, swappable agent engine. Memory is the first-class citizen.</div>
+  <div class="mermaid">
+flowchart TB
+  subgraph REPO["~/Projects/ai-kernel (one repo)"]
+    direction TB
+    MEM["memory/<br/>global/ (committed)<br/>repos/&lt;name&gt;/ (gitignored)<br/>personal/ (gitignored)"]
+    INDEX[("index.json<br/>flat cards + inverted")]
+    CFG["config.local.yaml<br/>roots · agents · triage · hooks"]
+    TRI{{"ai-kernel-triage<br/><b>the decider</b><br/>task.json → decision.json"}}
+    AGT["ai-kernel-agent<br/>engine swap-point"]
+    IDX["ai-kernel-index"]
+    SCN["ai-kernel-scan<br/><i>Phase C</i>"]
+    SGT["ai-kernel-suggest<br/><i>Phase C</i>"]
+  end
+
+  subgraph TIERS["tiered backends (config-driven)"]
+    direction LR
+    T0[tier0 bash]
+    T1[tier1 Ollama]
+    T2[tier2 Haiku]
+    T3[tier3 Sonnet]
+    T4[tier4 Opus]
+  end
+
+  ENGINE(["claude-p · codex · qwen · …<br/>swappable"])
+  SHADOW[".serena/memories<br/>.claude/projects/*/memory<br/><i>shadow sources (scanner only)</i>"]
+  AGENT["agent session<br/>(any harness)"]
+
+  MEM --> IDX
+  IDX --> INDEX
+  CFG -.reads.-> IDX
+  CFG -.reads.-> TRI
+  CFG -.reads.-> AGT
+  CFG -.reads.-> SCN
+  CFG -.reads.-> SGT
+
+  AGENT -- "task.json" --> TRI
+  SCN -- "task.json" --> TRI
+  SGT -- "task.json" --> TRI
+  SHADOW --> SCN
+
+  INDEX --> TRI
+  INDEX --> SGT
+
+  TRI -- "decision.json" --> AGT
+  TRI -- "surface_cards nudge" --> AGENT
+
+  AGT --> T0
+  AGT --> T1
+  AGT --> T2 & T3 & T4
+  T2 --> ENGINE
+  T3 --> ENGINE
+  T4 --> ENGINE
+
+  classDef mem fill:#3fb95022,stroke:#3fb950,color:#e6edf3
+  classDef idx fill:#3fb95022,stroke:#3fb950,color:#e6edf3
+  classDef cfg fill:#d2991d22,stroke:#e3b341,color:#e6edf3
+  classDef tri fill:#a371f722,stroke:#a371f7,color:#e6edf3,stroke-width:3px
+  classDef agt fill:#db61a222,stroke:#db61a2,color:#e6edf3
+  classDef script fill:#161b22,stroke:#6e7681,color:#e6edf3
+  classDef future fill:#161b22,stroke:#6e7681,color:#8b949e,stroke-dasharray:4 3
+  classDef tier fill:#161b22,stroke:#484f58,color:#8b949e
+  classDef engine fill:#1f6feb22,stroke:#1f6feb,color:#e6edf3
+  classDef shadow fill:#6e768122,stroke:#8b949e,color:#8b949e,stroke-dasharray:4 3
+
+  class MEM mem
+  class INDEX idx
+  class CFG cfg
+  class TRI tri
+  class AGT agt
+  class IDX script
+  class SCN,SGT future
+  class T0,T1,T2,T3,T4 tier
+  class ENGINE engine
+  class SHADOW shadow
+  class AGENT script
+  </div>
+</div>
+</div>
+
+<div class="footer">
+<b>What changed.</b>
+<table>
+<tr><th>Axis</th><th>Legacy</th><th>Memory-Layer MVP</th></tr>
+<tr><td>Distribution</td><td>git submodule into every consumer repo</td><td>single self-contained repo, no submodule tax</td></tr>
+<tr><td>Kernel's job</td><td>prompt scaffolding (loops + substrate + templates)</td><td>memory substrate + triage + agent dispatch</td></tr>
+<tr><td>Memory</td><td>outsourced to Serena + CSV + handoff (no lifecycle)</td><td>first-class cards with frontmatter (id · scope · type · confidence · expires)</td></tr>
+<tr><td>Retrieval</td><td>binary @-include + "load loop on gate"</td><td>tiered backends, triage decides power per task</td></tr>
+<tr><td>Agent coupling</td><td>Claude-specific (CLAUDE.md)</td><td>engine-agnostic (agent.cmd config, swap Claude↔Codex↔Qwen)</td></tr>
+<tr><td>CLI surface</td><td>install/maintenance (init, detect, check, update)</td><td>runtime (index, triage, agent, scan, suggest)</td></tr>
+<tr><td>Completeness</td><td>5 of 6 loops are empty stubs</td><td>Phase A+B shipped (index + triage + agent); C onwards</td></tr>
+</table>
+<br/>
+<b>Salvageable from legacy.</b> <i>loops/execution.md</i> → tier-2 dev-workflow card. <i>substrate/navigation.md</i> + <i>agents.md</i> → seed memory cards (always-on). <i>tool-defaults.md</i> + <i>tool-categories.md</i> → memory card modelling "category → tool with override". <i>templates/*</i> → artifact scaffolds for agent work (orthogonal to memory). <i>internal/detectors/</i> → pure functions that could seed a new repo's memory with auto-detected facts. <i>cmd/init.go</i> submodule-add logic → revive if we ever need <code>ai-kernel init</code> to scaffold memory into target repos. Rest: dead.
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad:true, theme:'dark',
+    themeVariables:{ fontFamily:'-apple-system,Segoe UI,sans-serif', fontSize:'12px' },
+    flowchart:{ curve:'basis', padding:14, nodeSpacing:28, rankSpacing:42 }
+  });
+</script>
+</body>
+</html>

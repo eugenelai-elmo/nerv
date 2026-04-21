@@ -1,0 +1,39 @@
+# AI Kernel configuration
+# Copy to $AI_KERNEL_CONFIG (default: ~/.config/ai-kernel/config.yaml) and edit.
+
+memory:
+  roots:
+    - { path: $HOME/Projects/elmo-application/.ai/memory, scope: repo }
+    - { path: $AI_KERNEL_HOME/memory, scope: global }
+  shadow_sources:
+    - $HOME/.serena/memories
+    - $HOME/Projects/elmo-application/.serena/memories
+  index_path: $AI_KERNEL_HOME/index.json
+  archive_path: $AI_KERNEL_HOME/archive
+
+agents:
+  tier0: { kind: bash }
+  tier1: { kind: local, cmd: "curl -s http://localhost:11434/api/embeddings", model: nomic-embed-text }
+  tier2: { kind: cli,   cmd: "claude -p",                                      model: haiku-4-5 }
+  tier3: { kind: cli,   cmd: "claude -p",                                      model: sonnet-4-6 }
+  tier4: { kind: cli,   cmd: "claude -p",                                      model: opus-4-7 }
+
+triage:
+  rules:
+    hash-check:      tier0
+    empty-check:     tier0
+    mtime-check:     tier0
+    near-duplicate:  tier1
+    nudge-query:     tier0
+    propose-merge:   tier2
+    classify:        tier2
+    summarize:       tier2
+    arbitrate:       tier3
+    architectural:   tier3
+  default: tier2
+  max_self_spend: tier1
+
+hooks:
+  post_serena_write: bin/ai-kernel-scan
+  pre_tool_use:      bin/ai-kernel-suggest
+  interval_scan_minutes: 60

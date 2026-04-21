@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# ai-kernel-agent — the executor.
+#
+# Reads a decision.json on stdin (from ai-kernel-triage), plus an optional
+# prompt on $1 (path to a prompts/*.md file or "-" for stdin-after-decision).
+# Shells out to the backend configured for decision.tier and streams its output.
+#
+# This is the engine swap-point: every tier's `cmd` and `model` live in
+# config.yaml. Switching Claude → Qwen → Codex is a config edit.
+#
+# Usage:
+#   echo '<decision.json>' | ai-kernel-agent [prompt-file|-]
+#
+# Backend kinds:
+#   bash   → decision passes through; agent emits {"passthrough": true}
+#   local  → runs config.agents.<tier>.cmd with prompt on stdin (Ollama etc)
+#   cli    → runs config.agents.<tier>.cmd -m <model> with prompt on stdin
+
+set -euo pipefail
+# shellcheck source=../config/config.sh
+source "$(dirname "$0")/../config/config.sh"
+
+prompt_arg="${1:-}"
+decision="$(cat)"
+[[ -z "$decision" ]] && ak_die "empty stdin — pipe a decision.json"
+
+tier="$(jq -r '.tier // ""' <<<"$decision")"
+[[ -z "$tier" ]] && ak_die "decision.json missing .tier"
+
+kind="$(yq -r ".agents.\"$tier\".kind // \"\"" "$AI_KERNEL_CONFIG")"
+cmd="$(yq  -r ".agents.\"$tier\".cmd  // \"\"" "$AI_KERNEL_CONFIG")"
+model="$(yq -r ".agents.\"$tier\".model // \"\"" "$AI_KERNEL_CONFIG")"
+
+[[ -z "$kind" ]] && ak_die "no agents.$tier.kind in config"
+
+# Resolve prompt source
+prompt=""
+if [[ "$prompt_arg" == "-" ]]; then
+  prompt="$(cat)"
+elif [[ -n "$prompt_arg" ]]; then
+  [[ -f "$prompt_arg" ]] || ak_die "prompt file not found: $prompt_arg"
+  prompt="$(cat "$prompt_arg")"
+fi
+
+case "$kind" in
+  bash)
+    # Tier 0 — deterministic, no LLM. Emit a passthrough receipt so callers
+    # have a uniform contract.
+    jq -n --arg tier "$tier" --argjson decision "$decision" \
+      '{ passthrough: true, tier: $tier, decision: $decision }'
+    ;;
+  local|cli)
+    [[ -z "$cmd" ]] && ak_die "agents.$tier.cmd is empty"
+    # Build the invocation. Model flag convention: `--model` for CLI agents,
+    # no extra flag for local (Ollama et al — model is in the JSON body).
+    if [[ "$kind" == "cli" && -n "$model" ]]; then
+      # shellcheck disable=SC2086
+      printf '%s\n' "$prompt" | $cmd --model "$model"
+    else
+      # shellcheck disable=SC2086
+      printf '%s\n' "$prompt" | $cmd
+    fi
+    ;;
+  *)
+    ak_die "unknown agent kind: $kind"
+    ;;
+esac

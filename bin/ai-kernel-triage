@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# ai-kernel-triage — the decider.
+#
+# Reads a task.json on stdin, emits a decision.json on stdout.
+# Rules live in config (triage.rules + triage.default).
+# The tiering invariant: triage may never spend more than max_self_spend.
+# MVP: pure case-statement routing + inverted-index lookup. No LLM calls.
+#
+# task.json shape:
+#   { "kind": "<kind>", "query": "<free text>", "context": {...} }
+#
+# decision.json shape:
+#   { "tier": "tier0|tier1|tier2|tier3|tier4",
+#     "surface_cards": ["<id>", ...],
+#     "action": "nudge|dispatch|skip",
+#     "rationale": "<why>" }
+
+set -euo pipefail
+# shellcheck source=../config/config.sh
+source "$(dirname "$0")/../config/config.sh"
+
+task="$(cat)"
+[[ -z "$task" ]] && ak_die "empty stdin — pipe a task.json"
+
+kind="$(jq -r '.kind // ""' <<<"$task")"
+query="$(jq -r '.query // ""' <<<"$task")"
+
+# ── Rule lookup: triage.rules[kind], fallback to triage.default ──────────────
+rule_tier="$(yq -r ".triage.rules.\"$kind\" // .triage.default // \"tier2\"" "$AI_KERNEL_CONFIG")"
+
+# ── Invariant: triage itself must never exceed max_self_spend ───────────────
+# (The chosen tier is for the dispatched work, not for triage itself, so this
+# invariant is informational at MVP — will bite once triage recurses into an
+# LLM fallback in v2.)
+max_self="$(yq -r '.triage.max_self_spend // "tier1"' "$AI_KERNEL_CONFIG")"
+
+# ── Surface cards: inverted-index lookup over query tokens ──────────────────
+surface_cards='[]'
+if [[ -n "$query" && -f "$AI_KERNEL_INDEX" ]]; then
+  # tokenize query → intersect hits across by_term
+  tokens="$(printf '%s' "$query" \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr -c '[:alnum:]' '\n' \
+    | awk 'length($0) >= 3 && !/^(the|and|for|with|this|that|from|your|have|will|are|was|were|has|had|but|not|all|any|can|use|used|into|out|via|per|as|at|be|by|in|is|it|of|on|or|to)$/' \
+    | sort -u)"
+  if [[ -n "$tokens" ]]; then
+    # For each token, get its card list; union them, weight by hit count.
+    surface_cards="$(
+      while IFS= read -r tok; do
+        [[ -z "$tok" ]] && continue
+        jq -r --arg t "$tok" '(.by_term[$t] // [])[]' "$AI_KERNEL_INDEX" 2>/dev/null || true
+      done <<<"$tokens" \
+      | sort | uniq -c | sort -rn | head -5 | awk '{print $2}' \
+      | jq -R . | jq -s .
+    )"
+    [[ -z "$surface_cards" || "$surface_cards" == "null" ]] && surface_cards='[]'
+  fi
+fi
+
+# ── Action: nudge if we have cards to surface; dispatch for real work ───────
+action="dispatch"
+case "$kind" in
+  nudge-query|pre-tool-use) action="nudge" ;;
+  hash-check|empty-check|mtime-check) action="dispatch" ;;
+  "") action="skip" ;;
+esac
+
+rationale="rule matched: kind='$kind' → $rule_tier"
+if [[ "$(jq -r 'length' <<<"$surface_cards")" -gt 0 ]]; then
+  rationale="$rationale; surfaced $(jq -r 'length' <<<"$surface_cards") card(s)"
+fi
+
+jq -n \
+  --arg tier "$rule_tier" \
+  --argjson cards "$surface_cards" \
+  --arg action "$action" \
+  --arg rationale "$rationale" \
+  --arg max_self "$max_self" \
+  '{
+    tier: $tier,
+    surface_cards: $cards,
+    action: $action,
+    rationale: $rationale,
+    _meta: { max_self_spend: $max_self }
+  }'

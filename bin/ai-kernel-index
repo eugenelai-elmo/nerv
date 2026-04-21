@@ -124,7 +124,7 @@ for (( i=0; i<root_count; i++ )); do
     done <<<"$terms"
 
     total=$((total+1))
-  done < <(find "$root_path" -type f -name '*.md' -not -path '*/archive/*' -print0)
+  done < <(find -L "$root_path" -type f -name '*.md' -not -path '*/archive/*' -print0)
 done
 
 mkdir -p "$(dirname "$AI_KERNEL_INDEX")"

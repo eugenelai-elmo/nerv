@@ -3,16 +3,17 @@
 # Sourced by every bin/ai-kernel-* script.
 #
 # Exports:
-#   AI_KERNEL_ROOT        — this repo (scripts live under $AI_KERNEL_ROOT/bin)
-#   AI_KERNEL_HOME        — data root (default: ~/.config/ai-kernel)
-#   AI_KERNEL_CONFIG      — config file path (default: $AI_KERNEL_HOME/config.yaml)
-#   AI_KERNEL_INDEX       — index.json path (from config)
-#   AI_KERNEL_ARCHIVE     — archive path (from config)
+#   AI_KERNEL_ROOT    — this repo (scripts live under $AI_KERNEL_ROOT/bin)
+#   AI_KERNEL_CONFIG  — active config file (AI_KERNEL_ROOT/config.local.yaml,
+#                       falling back to config/config.example.yaml)
+#   AI_KERNEL_INDEX   — absolute path to index.json (from config)
+#   AI_KERNEL_ARCHIVE — absolute path to archive dir (from config)
 #
-# Helper functions:
-#   ak_config <yq-path>   — read a value from config.yaml with env-var expansion
-#   ak_die <message>      — print error to stderr and exit 1
-#   ak_require <cmd>      — ensure a binary exists on PATH
+# Helpers:
+#   ak_config <yq-path>  read a config value, expanding $HOME and relative paths
+#   ak_abs <path>        resolve a possibly-relative path against AI_KERNEL_ROOT
+#   ak_die <msg>         print to stderr and exit 1
+#   ak_require <cmd>     ensure binary on PATH
 
 set -euo pipefail
 
@@ -29,25 +30,35 @@ if [[ -z "${AI_KERNEL_ROOT:-}" ]]; then
   export AI_KERNEL_ROOT
 fi
 
-: "${AI_KERNEL_HOME:=$HOME/.config/ai-kernel}"
-: "${AI_KERNEL_CONFIG:=$AI_KERNEL_HOME/config.yaml}"
-export AI_KERNEL_HOME AI_KERNEL_CONFIG
-
-if [[ ! -f "$AI_KERNEL_CONFIG" ]]; then
-  ak_die "config not found at $AI_KERNEL_CONFIG — copy $AI_KERNEL_ROOT/config/config.example.yaml there and edit"
+# Active config: config.local.yaml if present, else the example (for first-run / CI)
+if [[ -z "${AI_KERNEL_CONFIG:-}" ]]; then
+  if [[ -f "$AI_KERNEL_ROOT/config.local.yaml" ]]; then
+    AI_KERNEL_CONFIG="$AI_KERNEL_ROOT/config.local.yaml"
+  else
+    AI_KERNEL_CONFIG="$AI_KERNEL_ROOT/config/config.example.yaml"
+  fi
+  export AI_KERNEL_CONFIG
 fi
 
-# Read a config value, expanding $HOME and $AI_KERNEL_HOME.
+# Resolve a path: if relative, rebase on AI_KERNEL_ROOT; otherwise leave absolute.
+ak_abs() {
+  local p="$1"
+  case "$p" in
+    /*) printf '%s' "$p" ;;
+    *)  printf '%s/%s' "$AI_KERNEL_ROOT" "$p" ;;
+  esac
+}
+
+# Read a config value, expanding $HOME.
 ak_config() {
   local path="$1"
   local raw
   raw="$(yq -r "$path // \"\"" "$AI_KERNEL_CONFIG")"
   # shellcheck disable=SC2016
   raw="${raw//\$HOME/$HOME}"
-  raw="${raw//\$AI_KERNEL_HOME/$AI_KERNEL_HOME}"
   printf '%s' "$raw"
 }
 
-AI_KERNEL_INDEX="$(ak_config '.memory.index_path')"
-AI_KERNEL_ARCHIVE="$(ak_config '.memory.archive_path')"
+AI_KERNEL_INDEX="$(ak_abs "$(ak_config '.memory.index_path')")"
+AI_KERNEL_ARCHIVE="$(ak_abs "$(ak_config '.memory.archive_path')")"
 export AI_KERNEL_INDEX AI_KERNEL_ARCHIVE

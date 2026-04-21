@@ -18,14 +18,17 @@ Build a durable, token-efficient, progressively-disclosed, cross-sectionally-nav
 - Migrating all 46+ Serena memories in one pass (pilot 3–5 cards, iterate).
 - Rewriting / deleting the existing Go CLI (parked under `legacy/`; see §11).
 
-## 1. Two-tier storage model
+## 1. Storage model — single repo, namespaced by scope
 
-| Tier | Location | Owner | Example |
+All memory lives inside the kernel repo under `memory/`, organised by scope directory. No per-app-repo `.ai/memory/`. No separate data repo.
+
+| Path | Scope | Git status | Purpose |
 |---|---|---|---|
-| Repo-local | `<repo>/.ai/memory/` | Team. Committed, reviewed. | Conventions, architecture decisions, domain models |
-| Cross-cutting | `$AI_KERNEL_HOME/memory/` (default `~/.config/ai-kernel/memory/`, symlinked to `~/Projects/ai-kernel-data/memory/` for versioning) | Personal. Syncs across user's machines. | User preferences, cross-role context, doctrine |
+| `memory/global/`   | `global`   | committed  | Cross-cutting personal context, doctrine, syncs across your machines |
+| `memory/repos/<name>/` | `repo` | **gitignored** | Per-repo context. Namespace lives in git; contents stay local to avoid leaking internal work. |
+| `memory/personal/` | `personal` | **gitignored** | Truly private notes |
 
-Indexer walks both; every consumer queries one merged index.
+Memory format is plain markdown + YAML frontmatter — OS-agnostic. Any agent can consume `memory/*.md` without the kernel. Cross-machine sync for committed content = `git pull`.
 
 ## 2. Frontmatter spec (canonical card format)
 
@@ -81,19 +84,21 @@ Flat + inverted. Not a graph database.
 
 Relationships expressed via `related:` in frontmatter. Not stored as a separate graph. If graph queries emerge, derive on demand.
 
-## 4. Config (`$AI_KERNEL_CONFIG`, default `~/.config/ai-kernel/config.yaml`)
+## 4. Config (`$AI_KERNEL_ROOT/config.local.yaml`, falling back to `config/config.example.yaml`)
+
+All paths resolve against `AI_KERNEL_ROOT` (the repo) unless absolute. No `AI_KERNEL_HOME` env var.
 
 ```yaml
 memory:
   roots:
-    - { path: $HOME/Projects/elmo-application/.ai/memory, scope: repo }
-    - { path: $HOME/Projects/platform-common/.ai/memory, scope: repo }
-    - { path: $AI_KERNEL_HOME/memory, scope: global }
+    - { path: memory/global,   scope: global }
+    - { path: memory/repos,    scope: repo }      # nested: memory/repos/<name>/...
+    - { path: memory/personal, scope: personal }
   shadow_sources:                    # read for deviation, not canonical
     - $HOME/.serena/memories
-    - $HOME/.claude/projects/*/memory
-  index_path:   $AI_KERNEL_HOME/index.json
-  archive_path: $AI_KERNEL_HOME/archive
+    - $HOME/Projects/elmo-application/.serena/memories
+  index_path:   index.json
+  archive_path: archive
 
 agents:
   tier0: { kind: bash }                                          # deterministic, no LLM
@@ -196,42 +201,39 @@ Everything reads `$AI_KERNEL_CONFIG`. Everything respects `max_self_spend`.
 }
 ```
 
-## 8. File layout after scaffold
+## 8. File layout — single repo
 
 ```
-~/Projects/ai-kernel/                       # this repo
+~/Projects/ai-kernel/                       # everything lives here
   bin/
     ai-kernel-index
-    ai-kernel-triage
-    ai-kernel-agent
-    ai-kernel-scan
-    ai-kernel-suggest
+    ai-kernel-triage          (Phase B)
+    ai-kernel-agent           (Phase B)
+    ai-kernel-scan            (Phase C)
+    ai-kernel-suggest         (Phase C)
   config/
-    config.example.yaml
-    config.sh                               # yq-based env-var shim sourced by scripts
-  prompts/                                  # invoked by tier 2+ agents
-    classify-memory.md
-    propose-merge.md
-  memory/                                   # ai-kernel's own memory (scope: global)
+    config.example.yaml                     # template, committed
+    config.sh                               # shim sourced by every script
+  config.local.yaml                         # your active config · GITIGNORED
+  memory/
+    global/                                 # committed (doctrine, cross-machine personal)
+    repos/                                  # GITIGNORED (per-repo context, no leaks)
+      elmo-application/
+        conventions/datetime.md
+        ESL-3648/module-federation-wip.md
+      platform-common/
+    personal/                               # GITIGNORED (truly private)
+  archive/                                  # committed (archived cards)
+  index.json                                # GITIGNORED (derived)
+  prompts/                                  # tier-2+ agent prompts (Phase B+)
   docs/
     frontmatter-spec.md
     config-reference.md
     triage-contract.md
     migration-from-serena.md
   legacy/                                   # parked Go CLI (see §11)
-    cmd/ ...
   PLAN.md                                   # this file
-  README.md                                 # rewritten for bash MVP
-
-~/.config/ai-kernel/                        # default $AI_KERNEL_HOME
-  config.yaml                               # user's active config
-  memory/              → symlink → ~/Projects/ai-kernel-data/memory/
-  archive/             → symlink → ~/Projects/ai-kernel-data/archive/
-  index.json
-
-~/Projects/ai-kernel-data/                  # fresh git repo, versioned data
-  memory/
-  archive/
+  README.md
 ```
 
 ## 9. Phased execution
@@ -242,13 +244,13 @@ Everything reads `$AI_KERNEL_CONFIG`. Everything respects `max_self_spend`.
 2. Create `bin/`, `config/`, `prompts/`, `memory/`, `docs/` skeleton.
 3. Write `config/config.example.yaml` + `config/config.sh` (yq shim).
 4. Write `bin/ai-kernel-index` — walks roots, emits `index.json`.
-5. Seed `elmo-application/.ai/memory/` with 3 pilot cards migrated from Serena:
-   - `conventions/datetime.md` (was `conventions/datetime`)
-   - `ESL-3648/module-federation-wip.md` (was `module_federation_wip_tracker`)
-   - `global/bitbucket-api-access.md` (was `global/bitbucket_api_access`, goes to `$AI_KERNEL_HOME/memory/`)
+5. Seed 3 pilot cards in-repo:
+   - `memory/repos/elmo-application/conventions/datetime.md` (was Serena `conventions/datetime`)
+   - `memory/repos/elmo-application/ESL-3648/module-federation-wip.md` (was `module_federation_wip_tracker`)
+   - `memory/global/bitbucket-api-access.md` (was `global/bitbucket_api_access`)
 6. Run indexer. Verify `index.json` shape. Commit.
 
-**Exit criteria:** `ai-kernel-index` emits a valid index over 3 cards across 2 scopes.
+**Exit criteria:** `ai-kernel-index` emits a valid index over 3 cards across 2 scopes. ✅ **DONE**
 
 ### Phase B — Triage & agent abstraction
 
@@ -298,12 +300,11 @@ Full report: `/tmp/graphify-research.md`.
 
 ## 12. Open questions (parked, non-blocking)
 
-1. **Config location** — XDG (`~/.config/ai-kernel/`) with symlinks to `~/Projects/ai-kernel-data/` vs. putting config inside the data repo. Leaning XDG-with-symlinks. Decide at Phase A.
-2. **`expires:` default window** — `type: work` cards default to 14d? 30d? Match existing convention in `docs/conventions/serena-memory-lifecycle.md`.
-3. **PR review flow for `<repo>/.ai/memory/`** — someone's stale memory becomes your agent's hallucination source. Mitigation: review cards like code. But review bandwidth is real. Decide at Phase D.
-4. **Migration of 7 ambiguous Serena memories** (flagged in session-handoff.md) — revisit when porting in Phase D.
-5. **`related:` as free text vs. validated refs** — if `related: [foo]` but `foo.md` doesn't exist, does index fail or warn? Start with warn.
-6. **Router B (general request orchestrator)** — explicitly deferred; seam lives in triage contract.
+1. **`expires:` default window** — `type: work` cards default to 14d? 30d? Match existing convention in `docs/conventions/serena-memory-lifecycle.md`.
+2. **Team sharing of `memory/repos/<name>/`** — currently gitignored to avoid leaking internal context. If/when a team wants shared repo-scoped memory, options: (a) unignore a specific subdir case-by-case, (b) fork the kernel repo as `ai-kernel-elmo-team`, (c) promote to a separate shared memory repo. Decide when the need is real, not before.
+3. **Migration of 7 ambiguous Serena memories** (flagged in session-handoff.md) — revisit when porting in Phase D.
+4. **`related:` as free text vs. validated refs** — if `related: [foo]` but `foo.md` doesn't exist, does index fail or warn? Start with warn.
+5. **Router B (general request orchestrator)** — explicitly deferred; seam lives in triage contract.
 
 ## 13. Success criteria (for the whole MVP, post-Phase D)
 

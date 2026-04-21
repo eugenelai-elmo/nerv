@@ -1,11 +1,33 @@
-# legacy/
+# ai-kernel
 
-Parked Go CLI scaffold from the previous ai-kernel direction (submodule-overlay detector).
+Reusable AI agent kernel for Claude Code. Consume as a git submodule — projects get a process loop, substrate protocols, and tool bindings without copying files.
 
-Not opposed to the current memory-layer MVP — just a different slice. Kept for:
+## Quick Start
 
-- `install.sh` / release workflow — reusable for distributing the bash scripts once they stabilise.
-- `loops/*.md`, `substrate/*.md`, `templates/` (still at repo root) — reusable as tier-2+ agent prompts.
-- `cmd/init.go` submodule-add logic — may come back if we ship `ai-kernel init` that scaffolds `.ai/memory/` into a target repo.
+```bash
+# Install CLI (once)
+curl -fsSL https://raw.githubusercontent.com/eugenelai-elmo/ai-kernel/main/install.sh | sh
 
-See `PLAN.md` §11 for the full disposition.
+# Add to a project
+cd ~/Projects/my-repo
+ai-kernel init
+.ai/bin/ai-kernel detect
+```
+
+## What's included
+
+- `CLAUDE.md` — boot context (zero token cost)
+- `substrate/` — memory, navigation, agent coordination protocols
+- `loops/execution.md` — full dev cycle with progressive disclosure gates
+- `loops/quality|security|performance|reliability|strategic.md` — on-demand loops
+- `templates/` — brief, plan, analysis, pr-summary, verification
+- `tool-defaults.md` — default tool bindings
+
+## CLI
+
+```bash
+ai-kernel init      # scaffold .ai/, add submodule
+ai-kernel detect    # scan codebase → generate .ai/ overlays
+ai-kernel check ~/Projects/repo1 ~/Projects/repo2  # staleness report
+ai-kernel update    # git submodule update --remote
+```

@@ -39,7 +39,7 @@ jq --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.generated_at=$ts' "$TMP_INDEX" > 
 
 total=0
 for (( i=0; i<root_count; i++ )); do
-  root_path="$(ak_config ".memory.roots[$i].path")"
+  root_path="$(ak_abs "$(ak_config ".memory.roots[$i].path")")"
   root_scope="$(ak_config ".memory.roots[$i].scope")"
   [[ -d "$root_path" ]] || { printf '  [skip] %s (not found)\n' "$root_path" >&2; continue; }
 

@@ -1,22 +1,30 @@
-# AI Kernel configuration
-# Copy to $AI_KERNEL_CONFIG (default: ~/.config/ai-kernel/config.yaml) and edit.
+# AI Kernel configuration.
+# Copy to ../config.local.yaml at the repo root and edit. Paths are machine-local.
+#
+# All paths are relative to AI_KERNEL_ROOT (the repo root) unless absolute.
 
 memory:
+  # Canonical memory roots. Indexer walks these; scanner diffs against them.
   roots:
-    - { path: $HOME/Projects/elmo-application/.ai/memory, scope: repo }
-    - { path: $AI_KERNEL_HOME/memory, scope: global }
+    - { path: memory/global,   scope: global }
+    - { path: memory/repos,    scope: repo }       # nested: memory/repos/<repo-name>/...
+    - { path: memory/personal, scope: personal }
+
+  # Read-only secondary sources. Scanner diffs canonical roots against these
+  # to detect memory deviation (stale copies, conflicts, duplicates).
   shadow_sources:
     - $HOME/.serena/memories
     - $HOME/Projects/elmo-application/.serena/memories
-  index_path: $AI_KERNEL_HOME/index.json
-  archive_path: $AI_KERNEL_HOME/archive
+
+  index_path:   index.json
+  archive_path: archive
 
 agents:
   tier0: { kind: bash }
   tier1: { kind: local, cmd: "curl -s http://localhost:11434/api/embeddings", model: nomic-embed-text }
-  tier2: { kind: cli,   cmd: "claude -p",                                      model: haiku-4-5 }
-  tier3: { kind: cli,   cmd: "claude -p",                                      model: sonnet-4-6 }
-  tier4: { kind: cli,   cmd: "claude -p",                                      model: opus-4-7 }
+  tier2: { kind: cli,   cmd: "claude -p",                                     model: haiku-4-5 }
+  tier3: { kind: cli,   cmd: "claude -p",                                     model: sonnet-4-6 }
+  tier4: { kind: cli,   cmd: "claude -p",                                     model: opus-4-7 }
 
 triage:
   rules:

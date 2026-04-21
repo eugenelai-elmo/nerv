@@ -1,3 +1,17 @@
+# Go CLI (legacy) build artifacts
 /ai-kernel
 /ai-kernel-*
 *.test
+
+# User's active config (paths are machine-specific)
+/config.local.yaml
+
+# Derived — regenerate with bin/ai-kernel-index
+/index.json
+
+# Per-repo scoped memory — don't leak internal context
+# (memory/ namespace lives; contents stay local)
+/memory/repos/
+
+# Personal memory — truly private
+/memory/personal/

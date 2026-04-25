@@ -37,10 +37,12 @@ log="${AI_KERNEL_DECISIONS_LOG:-$AI_KERNEL_ROOT/decisions.jsonl}"
 [[ -f "$log" ]] || ak_die "no decisions.jsonl yet at $log"
 
 # (1) codeburn raw report.
-cb_args=()
-[[ -n "$since" ]] && cb_args+=(--since "$since")
 echo "── codeburn report ──"
-codeburn "${cb_args[@]}"
+if [[ -n "$since" ]]; then
+  codeburn --since "$since"
+else
+  codeburn
+fi
 
 # (2) Triage tier histogram from our log.
 echo

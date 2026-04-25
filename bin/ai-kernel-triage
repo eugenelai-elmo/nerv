@@ -39,7 +39,7 @@ kind="$(jq -r '.kind // ""' <<<"$task")"
 query="$(jq -r '.query // ""' <<<"$task")"
 
 # ── Rule lookup: triage.rules[kind], fallback to triage.default ──────────────
-rule_tier="$(yq -r ".triage.rules.\"$kind\" // .triage.default // \"tier2\"" "$AI_KERNEL_CONFIG")"
+rule_tier="$(AK_KIND="$kind" yq -r '.triage.rules[strenv(AK_KIND)] // .triage.default // "tier2"' "$AI_KERNEL_CONFIG")"
 
 # ── Invariant: triage itself must never exceed max_self_spend ───────────────
 # (The chosen tier is for the dispatched work, not for triage itself, so this

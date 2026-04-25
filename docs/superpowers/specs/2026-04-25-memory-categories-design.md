@@ -117,8 +117,18 @@ expires: 2026-05-05
 - `ai-kernel-triage --category decision` returns only decision-category cards.
 - The lint extension catches typo'd `scope`, `confidence`, and `type` values too (incidental wins).
 
+## Resolved during brainstorm
+
+- **No `category: scratch`.** Personal scope already covers partial ideas / ideation. Adding a category would duplicate intent.
+- **Decision cards are an append-only audit trail.** Decisions don't get edited; new decisions supersede old ones. Implies `decision`-category cards are immortal in the kernel and rely on `related`/`supersedes` links to track evolution. Lifecycle policy formalisation deferred to scope-(B).
+- **Commands DO NOT auto-emit memory.** Memory writes are explicit, user-triggered ("remember this", "commit to memory"). Default command behavior produces output, takes actions — does not silently mutate the memory layer. Token-efficient + intent-driven. To be encoded in the commands substrate spec.
+
 ## Open questions (parked)
 
 1. Should the indexer's `[reject]` lines also accumulate into `deviation-report.json` so the scanner sees them? (Cheap, but conflates two reports.)
-2. Should there be a `category: scratch` for very-short-lived ideation cards, or does `personal` scope cover that already? (Currently leaning: personal scope covers it.)
-3. When commands substrate ships, should every command emit a category-tagged memory entry by default? (`/decide` → `decision`, `/start-initiative` → `initiative`.) Likely yes, but defer until commands spec.
+2. **Versioning / supersession axis** — when an initiative or architecture card "advances" (v1 → v2), how does the kernel represent it? Three patterns to evaluate:
+   (a) **Git history is enough** — the file's git log IS the version history; no schema change. Simplest.
+   (b) **In-card history** — a `history: [...]` array appended on each material change. Inline, but bloats the card.
+   (c) **Separate version cards** — each version is its own card linked via `supersedes:` / `superseded_by:`. Best when versions need to coexist as query targets.
+   Likely lean (a) + (c) for high-value evolutions (architecture, decisions). To be specified alongside the **commands substrate** — the user's hint was that commands should *know* how to advance the current state of a plan/doctrine/initiative when the user says "v2 this", which means commands need a versioning protocol they trust.
+3. When commands substrate ships, the explicit user trigger ("remember this" / "commit to memory") will need a defined entry-point — likely a single `/remember` command that infers category + scope from context, or accepts them as flags.

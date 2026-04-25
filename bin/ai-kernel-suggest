@@ -66,8 +66,10 @@ esac
 task="$(jq -n --arg kind "$task_kind" --arg q "$query" --arg repo "$repo_name" \
   '{ kind: $kind, query: $q, context: { source: "suggest", repo: $repo } }')"
 
-# Triage.
-decision="$(printf '%s' "$task" | "$AI_KERNEL_ROOT/bin/ai-kernel-triage" --scope "$scopes")"
+# Triage. --repo restricts repo-scoped cards to this repo's namespace
+# (without it, cards from other repos in memory/repos/* would leak through).
+decision="$(printf '%s' "$task" | "$AI_KERNEL_ROOT/bin/ai-kernel-triage" \
+  --scope "$scopes" --repo "$repo_name")"
 
 # Format surface_cards as <system-reminder>.
 card_count="$(jq -r '.surface_cards | length' <<<"$decision")"

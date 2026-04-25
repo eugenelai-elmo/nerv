@@ -19,14 +19,19 @@ set -euo pipefail
 # shellcheck source=../config/config.sh
 source "$(dirname "$0")/../config/config.sh"
 
-# ── Optional scope filter: --scope a,b,c ────────────────────────────────────
+# ── Optional filters: --scope a,b,c · --repo <name> ────────────────────────
 allowed_scopes=""
+repo_filter=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --scope)
       [[ $# -ge 2 ]] || ak_die "--scope requires a value"
       [[ -n "$2" ]]  || ak_die "--scope value cannot be empty"
       allowed_scopes="$2"; shift 2 ;;
+    --repo)
+      [[ $# -ge 2 ]] || ak_die "--repo requires a value"
+      [[ -n "$2" ]]  || ak_die "--repo value cannot be empty"
+      repo_filter="$2"; shift 2 ;;
     --) shift; break ;;
     *) ak_die "unknown flag: $1" ;;
   esac
@@ -79,6 +84,21 @@ if [[ -n "$allowed_scopes" && "$(jq -r 'length' <<<"$surface_cards")" -gt 0 && -
       | [ $cards[]
           | . as $id
           | select(($idx.cards[$id].scope // "") | IN($allow[])) ]
+    ' "$AI_KERNEL_INDEX"
+  )"
+fi
+
+# ── Repo namespace filter (if requested) ────────────────────────────────────
+# When --repo is set, repo-scoped cards are dropped unless their .repo matches.
+# Other scopes (global, personal) pass through unchanged.
+if [[ -n "$repo_filter" && "$(jq -r 'length' <<<"$surface_cards")" -gt 0 && -f "$AI_KERNEL_INDEX" ]]; then
+  surface_cards="$(
+    jq --argjson cards "$surface_cards" --arg repo "$repo_filter" '
+      . as $idx
+      | [ $cards[]
+          | . as $id
+          | ($idx.cards[$id]) as $c
+          | select(($c.scope // "") != "repo" or ($c.repo // "") == $repo) ]
     ' "$AI_KERNEL_INDEX"
   )"
 fi

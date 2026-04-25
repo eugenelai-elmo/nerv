@@ -66,12 +66,21 @@ for (( i=0; i<root_count; i++ )); do
     hash="$(ak_hash_body "$md")"
     mtime="$(stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%SZ' "$md" 2>/dev/null || stat -c '%y' "$md" 2>/dev/null | awk '{print $1"T"$2"Z"}')"
 
+    # For repo-scoped cards, derive the namespace owner from the path:
+    # <root>/<reponame>/anything.md → repo_ns="<reponame>". Empty otherwise.
+    repo_ns=""
+    if [[ "$scope" == "repo" ]]; then
+      rel="${md#$root_path/}"
+      repo_ns="${rel%%/*}"
+    fi
+
     # Upsert card
     jq \
       --arg id "$id" \
       --arg path "$md" \
       --arg title "$title" \
       --arg scope "$scope" \
+      --arg repo "$repo_ns" \
       --arg mtype "$mtype" \
       --arg confidence "$confidence" \
       --arg hash "$hash" \
@@ -80,7 +89,7 @@ for (( i=0; i<root_count; i++ )); do
       --argjson tags "$tags_json" \
       --argjson related "$related_json" \
       '.cards[$id] = {
-          path:$path, title:$title, scope:$scope, type:$mtype, confidence:$confidence,
+          path:$path, title:$title, scope:$scope, repo:$repo, type:$mtype, confidence:$confidence,
           tags:$tags, related:$related, hash:$hash, mtime:$mtime, expires:$expires
        }' "$TMP_INDEX" > "$TMP_INDEX.1" && mv "$TMP_INDEX.1" "$TMP_INDEX"
 

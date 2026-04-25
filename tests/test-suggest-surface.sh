@@ -10,7 +10,7 @@ fixture_index="$(mktemp)"
 trap 'rm -f "$fixture_index"' EXIT
 jq -n '{
   generated_at: "2026-04-25T00:00:00Z",
-  cards: { "sample-card": { scope: "repo", title: "Sample", tags: ["datetime"] } },
+  cards: { "sample-card": { scope: "repo", repo: "test-repo", title: "Sample", tags: ["datetime"] } },
   by_tag:   { datetime: ["sample-card"] },
   by_term:  { datetime: ["sample-card"] },
   by_scope: { repo: ["sample-card"] }

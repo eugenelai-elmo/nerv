@@ -11,8 +11,8 @@ trap 'rm -f "$fixture_index"' EXIT
 jq -n '{
   generated_at: "2026-04-25T00:00:00Z",
   cards: {
-    "repo-card":     { scope: "repo",     title: "Repo card",     tags: ["datetime"] },
-    "personal-card": { scope: "personal", title: "Personal card", tags: ["datetime"] }
+    "repo-card":     { scope: "repo", repo: "test-repo", title: "Repo card",     tags: ["datetime"] },
+    "personal-card": { scope: "personal", repo: "",      title: "Personal card", tags: ["datetime"] }
   },
   by_tag:   { datetime: ["repo-card", "personal-card"] },
   by_term:  { datetime: ["repo-card", "personal-card"] },

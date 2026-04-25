@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# ai-kernel-scan — diff canonical roots against shadow sources.
+# Emits a deviation-report.json on stdout (also written to AI_KERNEL_ROOT
+# unless overridden).
+#
+# v1 deviations detected:
+#   - duplicate: shadow card body hash matches a canonical card body hash
+#   - stale:     canonical card has expires < today
+# (conflict detection deferred to v2.)
+
+set -euo pipefail
+# shellcheck source=../config/config.sh
+source "$(dirname "$0")/../config/config.sh"
+
+[[ -f "$AI_KERNEL_INDEX" ]] || ak_die "no index — run ai-kernel-index first"
+
+# Frontmatter-stripped body hash.
+hash_body() {
+  awk '
+    BEGIN { in_fm=0; past_fm=0 }
+    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
+    in_fm && /^---[[:space:]]*$/ { in_fm=0; past_fm=1; next }
+    !in_fm && past_fm { print }
+    !in_fm && !past_fm && NR==1 { print; past_fm=1 }
+    !in_fm && past_fm == 0 && NR > 1 { print }
+  ' "$1" | shasum -a 256 | awk '{print $1}'
+}
+
+today="$(date -u +%Y-%m-%d)"
+deviations='[]'
+
+# (1) Duplicates: shadow file body hash == any canonical card hash from index.
+shadow_count="$(yq -r '.memory.shadow_sources | length' "$AI_KERNEL_CONFIG")"
+for ((i=0; i<shadow_count; i++)); do
+  shadow_root="$(yq -r ".memory.shadow_sources[$i]" "$AI_KERNEL_CONFIG")"
+  shadow_root="$(eval echo "$shadow_root")"   # expand $HOME etc
+  [[ -d "$shadow_root" ]] || continue
+  while IFS= read -r -d '' shadow_file; do
+    sh="$(hash_body "$shadow_file")"
+    matches="$(jq -r --arg h "$sh" '
+      [ .cards | to_entries[] | select(.value.hash == $h) | .key ]
+    ' "$AI_KERNEL_INDEX")"
+    if [[ "$(jq -r 'length' <<<"$matches")" -gt 0 ]]; then
+      deviations="$(jq --argjson m "$matches" --arg path "$shadow_file" \
+        '. + [{ kind: "duplicate", shadow: $path, canonical_ids: $m }]' <<<"$deviations")"
+    fi
+  done < <(find "$shadow_root" -type f -name '*.md' -print0)
+done
+
+# (2) Stale: cards with expires < today.
+stale="$(jq -r --arg today "$today" '
+  [ .cards | to_entries[]
+    | select(.value.expires != null and .value.expires < $today)
+    | { kind: "stale", id: .key, expires_was: .value.expires } ]
+' "$AI_KERNEL_INDEX")"
+deviations="$(jq --argjson s "$stale" '. + $s' <<<"$deviations")"
+
+report="$(jq -n \
+  --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --argjson dev "$deviations" \
+  '{ generated_at: $ts, deviations: $dev }')"
+
+out="${AI_KERNEL_DEVIATION_REPORT:-$AI_KERNEL_ROOT/deviation-report.json}"
+printf '%s\n' "$report" | tee "$out"

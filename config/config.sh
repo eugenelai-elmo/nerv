@@ -37,6 +37,15 @@ ak_hash_body() {
   ' "$1" | shasum -a 256 | awk '{print $1}'
 }
 
+# ak_canonical <field>
+#   Emit one canonical value per line for the given lint-validated field.
+#   Reads memory.<field>.canonical from $AI_KERNEL_CONFIG.
+#   Returns 0 always; emits empty if not configured.
+ak_canonical() {
+  local field="$1"
+  AK_FIELD="$field" yq -r ".memory[strenv(AK_FIELD)].canonical[]?" "$AI_KERNEL_CONFIG" 2>/dev/null
+}
+
 # AI_KERNEL_ROOT = parent of this script's directory
 if [[ -z "${AI_KERNEL_ROOT:-}" ]]; then
   _self="${BASH_SOURCE[0]}"

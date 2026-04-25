@@ -19,6 +19,15 @@ set -euo pipefail
 # shellcheck source=../config/config.sh
 source "$(dirname "$0")/../config/config.sh"
 
+# ── Optional scope filter: --scope a,b,c ────────────────────────────────────
+allowed_scopes=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --scope) allowed_scopes="$2"; shift 2 ;;
+    *) ak_die "unknown flag: $1" ;;
+  esac
+done
+
 task="$(cat)"
 [[ -z "$task" ]] && ak_die "empty stdin — pipe a task.json"
 
@@ -57,6 +66,19 @@ if [[ -n "$query" && -f "$AI_KERNEL_INDEX" ]]; then
   fi
 fi
 
+# ── Scope filter (if requested) ─────────────────────────────────────────────
+if [[ -n "$allowed_scopes" && "$(jq -r 'length' <<<"$surface_cards")" -gt 0 && -f "$AI_KERNEL_INDEX" ]]; then
+  surface_cards="$(
+    jq --argjson cards "$surface_cards" --arg scopes "$allowed_scopes" '
+      ($scopes | split(",")) as $allow
+      | . as $idx
+      | [ $cards[]
+          | . as $id
+          | select(($idx.cards[$id].scope // "") | IN($allow[])) ]
+    ' "$AI_KERNEL_INDEX"
+  )"
+fi
+
 # ── Action: nudge if we have cards to surface; dispatch for real work ───────
 action="dispatch"
 case "$kind" in
@@ -70,16 +92,22 @@ if [[ "$(jq -r 'length' <<<"$surface_cards")" -gt 0 ]]; then
   rationale="$rationale; surfaced $(jq -r 'length' <<<"$surface_cards") card(s)"
 fi
 
-jq -n \
+decision="$(jq -n \
   --arg tier "$rule_tier" \
   --argjson cards "$surface_cards" \
   --arg action "$action" \
   --arg rationale "$rationale" \
   --arg max_self "$max_self" \
-  '{
-    tier: $tier,
-    surface_cards: $cards,
-    action: $action,
-    rationale: $rationale,
-    _meta: { max_self_spend: $max_self }
-  }'
+  '{ tier: $tier, surface_cards: $cards, action: $action, rationale: $rationale,
+     _meta: { max_self_spend: $max_self } }')"
+
+# Append to decisions log (path overridable for tests).
+log="${AI_KERNEL_DECISIONS_LOG:-$AI_KERNEL_ROOT/decisions.jsonl}"
+{
+  jq -cn --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        --argjson task "$task" \
+        --argjson dec  "$decision" \
+        '{ ts: $ts, task: $task, decision: $dec }' >> "$log"
+} 2>/dev/null || true   # never fail triage on log write
+
+printf '%s\n' "$decision"

@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-04-25T00:00:00Z",
+  "cards": {
+    "datetime-convention":   { "scope": "repo",     "title": "datetime", "tags": ["datetime"] },
+    "private-scratch":        { "scope": "personal", "title": "datetime scratch", "tags": ["datetime"] },
+    "global-doctrine":        { "scope": "global",   "title": "datetime doctrine", "tags": ["datetime"] }
+  },
+  "by_tag":   { "datetime": ["datetime-convention", "private-scratch", "global-doctrine"] },
+  "by_term":  { "datetime": ["datetime-convention", "private-scratch", "global-doctrine"] },
+  "by_scope": {
+    "repo":     ["datetime-convention"],
+    "personal": ["private-scratch"],
+    "global":   ["global-doctrine"]
+  }
+}

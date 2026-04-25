@@ -59,6 +59,6 @@ ak_config() {
   printf '%s' "$raw"
 }
 
-AI_KERNEL_INDEX="$(ak_abs "$(ak_config '.memory.index_path')")"
-AI_KERNEL_ARCHIVE="$(ak_abs "$(ak_config '.memory.archive_path')")"
+: "${AI_KERNEL_INDEX:=$(ak_abs "$(ak_config '.memory.index_path')")}"
+: "${AI_KERNEL_ARCHIVE:=$(ak_abs "$(ak_config '.memory.archive_path')")}"
 export AI_KERNEL_INDEX AI_KERNEL_ARCHIVE

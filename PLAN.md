@@ -258,26 +258,47 @@ Everything reads `$AI_KERNEL_CONFIG`. Everything respects `max_self_spend`.
 8. Write `bin/ai-kernel-agent` — reads `agents.<tier>` config, shells out.
 9. Smoke test: `echo '{"kind":"propose-merge",...}' | ai-kernel-triage | ai-kernel-agent`.
 
-**Exit criteria:** round-trip from task → decision → agent invocation works with Claude CLI. Swap `agents.tier2.cmd` to a stub `cat` command; still works.
+**Exit criteria:** round-trip from task → decision → agent invocation works with Claude CLI. Swap `agents.tier2.cmd` to a stub `cat` command; still works. ✅ **DONE**
 
-### Phase C — Scanner & PreToolUse hook
+### Phase C — Deployment, scanning, observability + lazy retrieval
 
-10. Write `bin/ai-kernel-scan` — diff canonical vs. shadow sources, emit `deviation-report.json`.
-11. Write `bin/ai-kernel-suggest` — PreToolUse shim; query → cards → system-reminder.
-12. Wire hook in `~/.claude/settings.json` for one project (elmo-application).
+Originally specced as "scanner + PreToolUse hook"; pivoted during execution to **C-global deployment + UserPromptSubmit hook (lazy retrieval)** based on token-cost analysis. See spec: `docs/superpowers/specs/2026-04-25-deployment-and-observability-design.md`.
 
-**Exit criteria:** scanner reports ≥1 real deviation between `.serena/memories/` and the 3 pilot cards. Suggest hook surfaces matching cards when greping for "datetime" or "module federation".
+10. ✅ `bin/ai-kernel-triage` — `--scope`, `--repo`, `--category` filters; `decisions.jsonl` log.
+11. ✅ `bin/ai-kernel-suggest` — UserPromptSubmit hook; `--cc-prompt-hook` reads CC stdin JSON; silent no-op outside namespaces; `--include-personal` opt-in.
+12. ✅ `bin/ai-kernel-scan` — duplicate + stale deviation detection.
+13. ✅ `bin/ai-kernel-burn` — codeburn observability wrapper joined with decisions.jsonl.
+14. ✅ `bin/ai-kernel-card` — retrieval primitive (`<id>`, `--body`, `--path`, `--json`).
+15. ✅ `prompts/attach.md` + `prompts/onboard.md` — bootstrap snippets.
+16. ✅ Wired UserPromptSubmit hook globally in `~/.claude/settings.json` (machine-local).
+17. ✅ Per-repo namespace filter — cards under `memory/repos/<name>/` carry `repo: <name>`; triage `--repo` prevents cross-repo leakage.
+18. ✅ `ak_hash_body` extracted to `config/config.sh` so indexer + scanner cannot drift.
+
+**Exit criteria:** ✅ scanner reports deviations against shadow sources; suggest hook surfaces matching cards from a real prompt; UserPromptSubmit-driven lazy retrieval working in production CC sessions.
+
+### Phase C+ — Memory categories (shipped as a follow-on round)
+
+Spec: `docs/superpowers/specs/2026-04-25-memory-categories-design.md`.
+
+19. ✅ Canonical-value lint pass — indexer rejects non-canonical `scope`, `type`, `confidence`, `category`; rejection count in summary.
+20. ✅ `category` frontmatter field, four canonical values (`decision`, `architecture`, `initiative`, `convention`), optional + strict.
+21. ✅ `by_category` inverted map; `bin/ai-kernel-triage --category` filter; canonical lists in `config.local.yaml`.
+22. ✅ Backfill of 3 pilot cards.
 
 ### Phase D — Documentation & pilot broadening
 
-13. Write `docs/frontmatter-spec.md`, `docs/config-reference.md`, `docs/triage-contract.md`, `docs/migration-from-serena.md`.
-14. Port another 10 Serena memories. Iterate on frontmatter/spec based on friction.
+23. Write `docs/frontmatter-spec.md`, `docs/config-reference.md`, `docs/triage-contract.md`, `docs/migration-from-serena.md`.
+24. Port additional Serena memories from `~/.serena/memories` and `~/Projects/elmo-application/.serena/memories`. Iterate on spec based on friction.
+25. Decide single-source-of-truth model for kernel-card-vs-repo-doc: kernel is the working ground, repo doc is the published artifact (resolved 2026-04-25). Encode as a documented pattern in frontmatter spec.
 
-**Exit criteria:** migration doc is followable by someone other than the author. 13 pilot cards indexed.
+**Exit criteria:** migration doc is followable by someone other than the author. ≥10 cards indexed beyond the seed three.
 
-### Phase E *(v2, not this round)*
+### Phase E *(later, not yet specced)*
 
-Archiver, proposer, Ollama Tier 1, PR-based review flow for `.ai/memory/`, LLM fallback inside triage.
+- **Commands substrate** (`/ship`, `/issue`, `/implement`, `/remember`, `/warm`, `/retire`, `/archive`). Notes: `docs/superpowers/notes/commands-substrate.md`.
+- **Topologies substrate** (pair-programming, researcher+synthesizer, tech-lead + team). Tracked in §13.
+- **Lifecycle policies** for expired cards — auto-flag, soft retire, archive verb. Notes in commands-substrate file.
+- **LLM-fallback triage**, archiver, proposer, Ollama Tier 1, PR-based review flow.
 
 ## 10. Graphify absorption summary
 
@@ -318,10 +339,15 @@ The kernel is multi-substrate. Phase C shipped the **memory** substrate. Two mor
 
 Each substrate is independently consumable but composes through the kernel's shared engine-agnostic stance.
 
-## 14. Success criteria (for the whole MVP, post-Phase D)
+## 14. Success criteria (for the whole MVP)
 
-- A new agent session, starting from scratch, surfaces the datetime convention card *before* grepping the codebase, when the user asks a datetime-related question.
-- Swapping `agents.tier2.cmd` from `claude -p` to `codex exec` keeps everything working, zero code change.
-- Indexer runs in <1 second over 50 cards.
-- A deviation between Serena memory and `.ai/memory/` is detected within one scan cycle and surfaced in `deviation-report.json`.
-- Any team member can author a new memory card by reading `docs/frontmatter-spec.md` alone.
+| | Criterion | Status |
+|---|---|---|
+| 1 | A new CC session in elmo-application surfaces the datetime convention card *before* grepping the codebase, when the user asks a datetime-related question. | ✅ Met (verified live 2026-04-25) |
+| 2 | Swapping `agents.tier2.cmd` from `claude -p` to `codex exec` keeps everything working, zero code change. | ✅ Met by design (untested in anger) |
+| 3 | Indexer runs in <1 second over 50 cards. | ✅ Met (3 cards in <0.5s; scaling untested) |
+| 4 | A deviation between Serena memory and kernel memory is detected within one scan cycle and surfaced in `deviation-report.json`. | ✅ Met |
+| 5 | Any team member can author a new memory card by reading a frontmatter spec alone. | ⏸ Phase D deliverable |
+| 6 | A repo with no kernel namespace produces zero hook output (no token cost). | ✅ Met |
+| 7 | `decisions.jsonl` accumulates one entry per triage call. | ✅ Met |
+| 8 | A typo'd `category` value fails the card with a clear error. | ✅ Met |

@@ -25,6 +25,24 @@ Accumulator for design hints raised before the formal brainstorm opens. Will be 
 - Other commands to ship in v1: `/ship`, `/issue`, `/implement`, `/decide`? Which earn their place vs. which are over-eager.
 - Distribution: `$AI_KERNEL_HOME/commands/*.md` symlinked to `~/.claude/commands/ai-kernel/` for CC users; paste-equivalent for other harnesses.
 
+## Expiry / lifecycle (raised 2026-04-25, parked)
+
+Cards have an `expires` field but currently nothing acts on it (only `ai-kernel-scan` flags `expires < today` as a stale deviation). Three lifecycle actions on expiry, none implemented:
+
+| Action | When | Effect |
+|---|---|---|
+| **Warm** | Work still active; expiry lapsed because we underestimated | Extend `expires`, keep in active surfacing |
+| **Retire** | Work done but card worth keeping | Drop from default surfacing; opt-in via `--include-expired`; mark `[STALE]` when shown |
+| **Archive** | Card no longer earns its index slot | Move to `archive/<YYYY-MM-DD>/`; remove from index; recoverable via git |
+
+Likely commands: `/warm <id>`, `/retire <id>`, `/archive <id>`. Or one verb (`/expire <id> --action warm`) — TBD.
+
+**Default behavior for triage when expiry detected:** lean toward **retire** (drop from surface_cards) with `--include-expired` opt-in. Cheap to implement, prevents stale data sneaking into agent context. To be specified together with the commands above.
+
+Cross-references:
+- Memory-categories spec deferred lifecycle policies per category to scope-(B). Connects here.
+- Commands-substrate brainstorm should cover all three verbs together.
+
 ## Deferred
 
 - **Agent topologies substrate** — also pending its own spec. Left until commands stabilises (commands inform what topologies need to invoke).

@@ -23,7 +23,11 @@ source "$(dirname "$0")/../config/config.sh"
 allowed_scopes=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --scope) allowed_scopes="$2"; shift 2 ;;
+    --scope)
+      [[ $# -ge 2 ]] || ak_die "--scope requires a value"
+      [[ -n "$2" ]]  || ak_die "--scope value cannot be empty"
+      allowed_scopes="$2"; shift 2 ;;
+    --) shift; break ;;
     *) ak_die "unknown flag: $1" ;;
   esac
 done
@@ -102,12 +106,15 @@ decision="$(jq -n \
      _meta: { max_self_spend: $max_self } }')"
 
 # Append to decisions log (path overridable for tests).
+# Failure modes intentionally swallowed: log dir unwritable, disk full.
+# We do NOT swallow jq schema errors — those would mask real bugs.
 log="${AI_KERNEL_DECISIONS_LOG:-$AI_KERNEL_ROOT/decisions.jsonl}"
-{
-  jq -cn --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        --argjson task "$task" \
-        --argjson dec  "$decision" \
-        '{ ts: $ts, task: $task, decision: $dec }' >> "$log"
-} 2>/dev/null || true   # never fail triage on log write
+mkdir -p "$(dirname "$log")" 2>/dev/null || true
+log_line="$(jq -cn \
+  --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --argjson task "$task" \
+  --argjson dec  "$decision" \
+  '{ ts: $ts, task: $task, decision: $dec }')"
+printf '%s\n' "$log_line" >> "$log" 2>/dev/null || true
 
 printf '%s\n' "$decision"

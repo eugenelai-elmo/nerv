@@ -61,4 +61,6 @@ ak_config() {
 
 : "${AI_KERNEL_INDEX:=$(ak_abs "$(ak_config '.memory.index_path')")}"
 : "${AI_KERNEL_ARCHIVE:=$(ak_abs "$(ak_config '.memory.archive_path')")}"
+[[ "$AI_KERNEL_INDEX"   != */ ]]   || ak_die "could not resolve memory.index_path from config"
+[[ "$AI_KERNEL_ARCHIVE" != */ ]]   || ak_die "could not resolve memory.archive_path from config"
 export AI_KERNEL_INDEX AI_KERNEL_ARCHIVE

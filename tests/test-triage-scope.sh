@@ -25,10 +25,19 @@ ids="$(echo "$out_scoped" | jq -r '.surface_cards[]' | sort | tr '\n' ',')"
 lines="$(wc -l < "$LOG" | tr -d ' ')"
 [[ "$lines" == "2" ]] || { echo "expected 2 log lines, got $lines"; exit 1; }
 
+# Line 2 corresponds to the --scope global,repo call → exactly 2 surface_cards.
+scoped_count="$(sed -n '2p' "$LOG" | jq '.decision.surface_cards | length')"
+[[ "$scoped_count" == "2" ]] || { echo "scoped log line expected 2 surface_cards, got $scoped_count"; exit 1; }
+
 # (4) Each log line is a valid JSON object with .tier and .surface_cards.
 while IFS= read -r line; do
   echo "$line" | jq -e '.decision.tier and (.decision.surface_cards|type == "array")' >/dev/null \
     || { echo "bad log line: $line"; exit 1; }
 done < "$LOG"
+
+# (5) Empty --scope value is rejected.
+if echo '{"kind":"nudge-query","query":"datetime"}' | "$ROOT/bin/ai-kernel-triage" --scope "" 2>/dev/null; then
+  echo "expected --scope '' to fail"; exit 1
+fi
 
 echo "OK"

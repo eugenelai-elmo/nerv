@@ -306,7 +306,19 @@ Full report: `/tmp/graphify-research.md`.
 4. **`related:` as free text vs. validated refs** — if `related: [foo]` but `foo.md` doesn't exist, does index fail or warn? Start with warn.
 5. **Router B (general request orchestrator)** — explicitly deferred; seam lives in triage contract.
 
-## 13. Success criteria (for the whole MVP, post-Phase D)
+## 13. Future substrates (post-Phase C)
+
+The kernel is multi-substrate. Phase C shipped the **memory** substrate. Two more substrates are tracked for future spec/plan cycles:
+
+| Substrate | Purpose | Status |
+|---|---|---|
+| **commands** | Procedural primitives — slash commands like `/ship`, `/issue`, `/implement` that compose memory + tools + skills into named dev-loop verbs. Salvages the Go CLI's `legacy/loops/*.md` and `legacy/substrate/*.md` structure. Distributed at `$AI_KERNEL_HOME/commands/*.md`; CC users symlink into `~/.claude/commands/`. | 🟡 spec-pending |
+| **topologies** | Tactical multi-agent team shapes — `pair-programming`, `researcher+synthesizer`, `tech-lead + agent team`, etc. Each topology declares roles + per-role tier + interaction protocol. Right-sizes models per role rather than monolithic Opus-everywhere. Invoked by command or directly. | 🟡 spec-pending |
+| skills, hooks, agents | Possible later substrates as patterns clarify. | ⏸ unscheduled |
+
+Each substrate is independently consumable but composes through the kernel's shared engine-agnostic stance.
+
+## 14. Success criteria (for the whole MVP, post-Phase D)
 
 - A new agent session, starting from scratch, surfaces the datetime convention card *before* grepping the codebase, when the user asks a datetime-related question.
 - Swapping `agents.tier2.cmd` from `claude -p` to `codex exec` keeps everything working, zero code change.

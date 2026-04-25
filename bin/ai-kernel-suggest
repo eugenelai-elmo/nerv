@@ -45,8 +45,10 @@ scopes="global,repo"
 [[ "$include_personal" == "true" ]] && scopes="$scopes,personal"
 
 # Build task.json.
-task_kind="nudge-query"
-[[ "$mode" == "init" ]] && task_kind="pre-tool-use"
+case "$mode" in
+  init)  task_kind="nudge-query" ;;
+  query) task_kind="pre-tool-use" ;;
+esac
 task="$(jq -n --arg kind "$task_kind" --arg q "$query" --arg repo "$repo_name" \
   '{ kind: $kind, query: $q, context: { source: "suggest", repo: $repo } }')"
 

@@ -23,6 +23,20 @@ ak_require() { command -v "$1" >/dev/null 2>&1 || ak_die "missing dependency: $1
 ak_require yq
 ak_require jq
 
+# ak_hash_body <file>
+#   Emit sha256 of a markdown file's body with YAML frontmatter stripped.
+#   The canonical "body hash" used by both indexer and scanner.
+ak_hash_body() {
+  awk '
+    BEGIN { in_fm=0; past_fm=0 }
+    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
+    in_fm && /^---[[:space:]]*$/ { in_fm=0; past_fm=1; next }
+    !in_fm && past_fm { print }
+    !in_fm && !past_fm && NR==1 { print; past_fm=1 }
+    !in_fm && past_fm == 0 && NR > 1 { print }
+  ' "$1" | shasum -a 256 | awk '{print $1}'
+}
+
 # AI_KERNEL_ROOT = parent of this script's directory
 if [[ -z "${AI_KERNEL_ROOT:-}" ]]; then
   _self="${BASH_SOURCE[0]}"

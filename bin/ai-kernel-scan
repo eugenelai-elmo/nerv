@@ -14,29 +14,19 @@ source "$(dirname "$0")/../config/config.sh"
 
 [[ -f "$AI_KERNEL_INDEX" ]] || ak_die "no index — run ai-kernel-index first"
 
-# Frontmatter-stripped body hash.
-hash_body() {
-  awk '
-    BEGIN { in_fm=0; past_fm=0 }
-    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
-    in_fm && /^---[[:space:]]*$/ { in_fm=0; past_fm=1; next }
-    !in_fm && past_fm { print }
-    !in_fm && !past_fm && NR==1 { print; past_fm=1 }
-    !in_fm && past_fm == 0 && NR > 1 { print }
-  ' "$1" | shasum -a 256 | awk '{print $1}'
-}
-
 today="$(date -u +%Y-%m-%d)"
 deviations='[]'
 
 # (1) Duplicates: shadow file body hash == any canonical card hash from index.
 shadow_count="$(yq -r '.memory.shadow_sources | length' "$AI_KERNEL_CONFIG")"
+[[ "$shadow_count" == "null" ]] && shadow_count=0
 for ((i=0; i<shadow_count; i++)); do
   shadow_root="$(yq -r ".memory.shadow_sources[$i]" "$AI_KERNEL_CONFIG")"
-  shadow_root="$(eval echo "$shadow_root")"   # expand $HOME etc
+  # Tilde-expand without eval (ak_abs only rebases relative paths, doesn't expand ~).
+  shadow_root="${shadow_root/#\~/$HOME}"
   [[ -d "$shadow_root" ]] || continue
   while IFS= read -r -d '' shadow_file; do
-    sh="$(hash_body "$shadow_file")"
+    sh="$(ak_hash_body "$shadow_file")"
     matches="$(jq -r --arg h "$sh" '
       [ .cards | to_entries[] | select(.value.hash == $h) | .key ]
     ' "$AI_KERNEL_INDEX")"
@@ -48,6 +38,8 @@ for ((i=0; i<shadow_count; i++)); do
 done
 
 # (2) Stale: cards with expires < today.
+# Stale: expires is INCLUSIVE — a card with expires == today is still valid,
+# becomes stale the day AFTER. Strict `<` enforces this.
 stale="$(jq -r --arg today "$today" '
   [ .cards | to_entries[]
     | select(.value.expires != null and .value.expires < $today)
@@ -61,4 +53,5 @@ report="$(jq -n \
   '{ generated_at: $ts, deviations: $dev }')"
 
 out="${AI_KERNEL_DEVIATION_REPORT:-$AI_KERNEL_ROOT/deviation-report.json}"
+mkdir -p "$(dirname "$out")"
 printf '%s\n' "$report" | tee "$out"

@@ -22,6 +22,16 @@ cat > "$work/shadow/datetime.md" <<'EOF'
 Always store UTC. Convert at presentation.
 EOF
 
+cat > "$work/canonical/global/expired-card.md" <<'EOF'
+---
+id: expired-card
+scope: global
+title: expired card fixture
+expires: 2020-01-01
+---
+Body that won't match anything in shadow.
+EOF
+
 cat > "$work/config.yaml" <<EOF
 memory:
   roots:
@@ -44,4 +54,6 @@ echo "$report" | jq -e '.deviations | length > 0' >/dev/null \
   || { echo "expected at least one deviation, got: $report"; exit 1; }
 echo "$report" | jq -e '.deviations[] | select(.kind == "duplicate")' >/dev/null \
   || { echo "expected duplicate kind, got: $report"; exit 1; }
+echo "$report" | jq -e '.deviations[] | select(.kind == "stale" and .id == "expired-card")' >/dev/null \
+  || { echo "expected stale deviation for expired-card, got: $report"; exit 1; }
 echo "OK"

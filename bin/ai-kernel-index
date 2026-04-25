@@ -10,6 +10,24 @@ set -euo pipefail
 # shellcheck source=../config/config.sh
 source "$(dirname "$0")/../config/config.sh"
 
+total_rejected=0
+
+# ak_lint_field <field-name> <value-from-frontmatter>
+#   Returns 0 if value is empty (will be defaulted) or in canonical list,
+#   1 otherwise.
+ak_lint_field() {
+  local field="$1" value="$2"
+  [[ -z "$value" ]] && return 0
+  local canonical_list
+  canonical_list="$(ak_canonical "$field")"
+  # If no canonical list configured for this field, skip the check.
+  [[ -z "$canonical_list" ]] && return 0
+  while IFS= read -r ok; do
+    [[ "$value" == "$ok" ]] && return 0
+  done <<<"$canonical_list"
+  return 1
+}
+
 TMP_INDEX="$(mktemp)"
 trap 'rm -f "$TMP_INDEX"' EXIT
 
@@ -21,7 +39,7 @@ tokenize() {
 }
 
 root_count=$(yq -r '.memory.roots | length' "$AI_KERNEL_CONFIG")
-echo '{"generated_at":"","cards":{},"by_tag":{},"by_term":{},"by_scope":{}}' > "$TMP_INDEX"
+echo '{"generated_at":"","cards":{},"by_tag":{},"by_term":{},"by_scope":{},"by_category":{}}' > "$TMP_INDEX"
 jq --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.generated_at=$ts' "$TMP_INDEX" > "$TMP_INDEX.1" && mv "$TMP_INDEX.1" "$TMP_INDEX"
 
 total=0
@@ -63,6 +81,30 @@ for (( i=0; i<root_count; i++ )); do
     tags_json="$(jq -c '(.tags // []) | if type == "array" then . else [] end' <<<"$fm_json")"
     related_json="$(jq -c '(.related // []) | if type == "array" then . else [] end' <<<"$fm_json")"
 
+    category="$(jq -r '.category // ""' <<<"$fm_json")"
+
+    # Lint canonical-valued fields. A non-canonical value rejects this card
+    # but the run continues. Empty values default per existing rules.
+    reject_reason=""
+    for f in scope type confidence category; do
+      case "$f" in
+        scope)      v="$scope" ;;
+        type)       v="$mtype" ;;
+        confidence) v="$confidence" ;;
+        category)   v="$category" ;;
+      esac
+      if ! ak_lint_field "$f" "$v"; then
+        reject_reason="$f=\"$v\" not in canonical"
+        break
+      fi
+    done
+
+    if [[ -n "$reject_reason" ]]; then
+      printf '  [reject] %s: %s\n' "$md" "$reject_reason" >&2
+      total_rejected=$((total_rejected+1))
+      continue
+    fi
+
     hash="$(ak_hash_body "$md")"
     mtime="$(stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%SZ' "$md" 2>/dev/null || stat -c '%y' "$md" 2>/dev/null | awk '{print $1"T"$2"Z"}')"
 
@@ -81,6 +123,7 @@ for (( i=0; i<root_count; i++ )); do
       --arg title "$title" \
       --arg scope "$scope" \
       --arg repo "$repo_ns" \
+      --arg category "$category" \
       --arg mtype "$mtype" \
       --arg confidence "$confidence" \
       --arg hash "$hash" \
@@ -89,7 +132,8 @@ for (( i=0; i<root_count; i++ )); do
       --argjson tags "$tags_json" \
       --argjson related "$related_json" \
       '.cards[$id] = {
-          path:$path, title:$title, scope:$scope, repo:$repo, type:$mtype, confidence:$confidence,
+          path:$path, title:$title, scope:$scope, repo:$repo, category:$category,
+          type:$mtype, confidence:$confidence,
           tags:$tags, related:$related, hash:$hash, mtime:$mtime, expires:$expires
        }' "$TMP_INDEX" > "$TMP_INDEX.1" && mv "$TMP_INDEX.1" "$TMP_INDEX"
 
@@ -104,6 +148,13 @@ for (( i=0; i<root_count; i++ )); do
     jq --arg id "$id" --arg scope "$scope" \
       '.by_scope[$scope] = ((.by_scope[$scope] // []) + [$id] | unique)' \
       "$TMP_INDEX" > "$TMP_INDEX.1" && mv "$TMP_INDEX.1" "$TMP_INDEX"
+
+    # by_category (skip when uncategorized)
+    if [[ -n "$category" ]]; then
+      jq --arg id "$id" --arg cat "$category" \
+        '.by_category[$cat] = ((.by_category[$cat] // []) + [$id] | unique)' \
+        "$TMP_INDEX" > "$TMP_INDEX.1" && mv "$TMP_INDEX.1" "$TMP_INDEX"
+    fi
 
     # by_term — tokenize title + body (frontmatter-stripped), collect top terms
     terms="$(
@@ -130,4 +181,5 @@ trap - EXIT
 card_count=$(jq -r '.cards | length' "$AI_KERNEL_INDEX")
 tag_count=$(jq -r '.by_tag | length' "$AI_KERNEL_INDEX")
 term_count=$(jq -r '.by_term | length' "$AI_KERNEL_INDEX")
-printf 'indexed %d cards · %d tags · %d terms → %s\n' "$card_count" "$tag_count" "$term_count" "$AI_KERNEL_INDEX"
+printf 'indexed %d cards · %d tags · %d terms · %d rejected → %s\n' \
+  "$card_count" "$tag_count" "$term_count" "$total_rejected" "$AI_KERNEL_INDEX"

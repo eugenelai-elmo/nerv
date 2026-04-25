@@ -3,6 +3,7 @@ id: bitbucket-api-access
 title: Bitbucket Cloud API Access
 scope: global
 type: knowledge
+category: convention
 confidence: extracted
 tags: [bitbucket, api, credentials, pr, global]
 related: []

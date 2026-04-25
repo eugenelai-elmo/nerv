@@ -16,6 +16,18 @@ memory:
     - $HOME/.serena/memories
     - $HOME/Projects/elmo-application/.serena/memories
 
+  # Canonical values for lint-validated frontmatter fields. The indexer rejects
+  # cards whose value for any of these fields is set but not in the canonical list.
+  # Adding a new value is a config edit + re-index, no code change.
+  scope:
+    canonical: [global, repo, personal]
+  type:
+    canonical: [knowledge, work]
+  confidence:
+    canonical: [extracted, inferred, ambiguous]
+  category:
+    canonical: [decision, architecture, initiative, convention]
+
   index_path:   index.json
   archive_path: archive
 

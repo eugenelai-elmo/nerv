@@ -15,3 +15,9 @@
 
 # Personal memory — truly private
 /memory/personal/
+
+# Triage decision log — append-only, machine-local
+/decisions.jsonl
+
+# Scanner output — derived
+/deviation-report.json

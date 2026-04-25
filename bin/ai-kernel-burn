@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# ai-kernel-burn — observability wrapper around codeburn.
+#
+# Reports one-shot success rate joined against decisions.jsonl (which tier
+# was chosen vs how the session actually went). codeburn must be on PATH;
+# install with `npm i -g @agentseal/codeburn` or per upstream README.
+#
+# Usage:
+#   ai-kernel-burn                         # full report (all sessions)
+#   ai-kernel-burn --since 7d              # last 7 days
+#   ai-kernel-burn --tier tier2            # filter to a specific tier
+#
+# Output: human-readable summary + machine-readable JSON tail.
+
+set -euo pipefail
+# shellcheck source=../config/config.sh
+source "$(dirname "$0")/../config/config.sh"
+
+ak_require codeburn
+
+since=""
+tier_filter=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --since)
+      [[ $# -ge 2 ]] || ak_die "--since requires a value"
+      since="$2"; shift 2 ;;
+    --tier)
+      [[ $# -ge 2 ]] || ak_die "--tier requires a value"
+      tier_filter="$2"; shift 2 ;;
+    --) shift; break ;;
+    *) ak_die "unknown flag: $1" ;;
+  esac
+done
+
+log="${AI_KERNEL_DECISIONS_LOG:-$AI_KERNEL_ROOT/decisions.jsonl}"
+[[ -f "$log" ]] || ak_die "no decisions.jsonl yet at $log"
+
+# (1) codeburn raw report.
+echo "── codeburn report ──"
+if [[ -n "$since" ]]; then
+  codeburn --since "$since"
+else
+  codeburn
+fi
+
+# (2) Triage tier histogram from our log.
+echo
+echo "── kernel triage tiers ──"
+if [[ -n "$tier_filter" ]]; then
+  jq -s --arg t "$tier_filter" \
+    '[ .[] | select(.decision.tier == $t) | .decision.tier ]
+     | group_by(.) | map({ tier: .[0], count: length })' "$log"
+else
+  jq -s \
+    '[ .[] | .decision.tier ]
+     | group_by(.) | map({ tier: .[0], count: length })' "$log"
+fi

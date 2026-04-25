@@ -13,19 +13,6 @@ source "$(dirname "$0")/../config/config.sh"
 TMP_INDEX="$(mktemp)"
 trap 'rm -f "$TMP_INDEX"' EXIT
 
-# Frontmatter-stripped body hash. Removes leading --- ... --- block, then sha256 of remainder.
-hash_body() {
-  local file="$1"
-  awk '
-    BEGIN { in_fm=0; past_fm=0 }
-    NR==1 && /^---[[:space:]]*$/ { in_fm=1; next }
-    in_fm && /^---[[:space:]]*$/ { in_fm=0; past_fm=1; next }
-    !in_fm && past_fm { print }
-    !in_fm && !past_fm && NR==1 { print; past_fm=1 }
-    !in_fm && past_fm == 0 && NR > 1 { print }
-  ' "$file" | shasum -a 256 | awk '{print $1}'
-}
-
 # Tokenize card body + title for inverted index. Lowercase, split on non-alnum, drop stopwords and short tokens.
 tokenize() {
   tr '[:upper:]' '[:lower:]' \
@@ -76,7 +63,7 @@ for (( i=0; i<root_count; i++ )); do
     tags_json="$(jq -c '(.tags // []) | if type == "array" then . else [] end' <<<"$fm_json")"
     related_json="$(jq -c '(.related // []) | if type == "array" then . else [] end' <<<"$fm_json")"
 
-    hash="$(hash_body "$md")"
+    hash="$(ak_hash_body "$md")"
     mtime="$(stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%SZ' "$md" 2>/dev/null || stat -c '%y' "$md" 2>/dev/null | awk '{print $1"T"$2"Z"}')"
 
     # Upsert card

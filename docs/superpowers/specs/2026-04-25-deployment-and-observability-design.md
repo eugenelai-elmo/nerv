@@ -22,19 +22,37 @@ PLAN.md remains the authority on storage model, frontmatter spec, index format, 
 
 There is **one** kernel clone per machine, at `$AI_KERNEL_HOME` (default `~/Projects/ai-kernel`). Host repos do not contain a `.ai/` directory, submodule, or symlink. The kernel is invisible infrastructure.
 
+**Hook choice — UserPromptSubmit only (lazy retrieval).** Originally specced as `SessionStart + PreToolUse`. Revised on 2026-04-25 after token-cost analysis:
+
+- **SessionStart fires too early** — no user intent yet, so we'd either dump everything (token-expensive) or surface nothing (a no-op hook). Dropped.
+- **PreToolUse fires too often** — once per tool call, with no clear signal about which cards are relevant to the *next* tool. Triage cost compounds without proportional value. Dropped.
+- **UserPromptSubmit is the goldilocks zone** — fires once per user turn, *before* the model sees the prompt, and the prompt content is the natural query carrier. Each turn surfaces ~3-5 relevant cards (~150-250 tokens), cached on subsequent turns since the system-reminder block is content-stable.
+
 Wiring lives entirely in `~/.claude/settings.json`:
 
 ```jsonc
 {
+  "env": { "AI_KERNEL_HOME": "/Users/eugene.lai/Projects/ai-kernel" },
   "hooks": {
-    "SessionStart": [{ "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest --init" }],
-    "PreToolUse":   [{ "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest" }]
-  },
-  "env": { "AI_KERNEL_HOME": "/Users/eugene.lai/Projects/ai-kernel" }
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command",
+            "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook" }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-`ai-kernel-suggest` silently no-ops when `$AI_KERNEL_HOME/memory/repos/$(basename "$PWD")/` does not exist (or when `$PWD` is outside a git repo). Repos that don't use the kernel pay zero cost and see zero noise.
+`ai-kernel-suggest --cc-prompt-hook` reads CC's hook JSON from stdin, extracts the `.prompt` field, and runs it through triage+suggest. Silently no-ops when:
+- `$AI_KERNEL_HOME/memory/repos/$(basename "$PWD")/` does not exist;
+- the prompt is empty or malformed JSON arrives;
+- triage returns zero matching cards.
+
+Repos that don't use the kernel pay zero cost and see zero noise.
 
 **Manual escape hatch — C-prompt.** For new machines (kernel not yet cloned) or for sharing context with a teammate, the kernel ships a paste-able snippet at `prompts/attach.md`. The agent can read it to learn where the kernel lives without an installer.
 
@@ -112,14 +130,15 @@ Kernel repo adds:
 
 Step 12 changes from "wire hook in `~/.claude/settings.json` for one project" to:
 
-> Wire SessionStart + PreToolUse hooks **globally** in `~/.claude/settings.json`, pointing at `$AI_KERNEL_HOME/bin/ai-kernel-suggest`. Verify silent no-op behavior in a repo with no namespace.
+> Wire a single `UserPromptSubmit` hook **globally** in `~/.claude/settings.json`, pointing at `$AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook`. Verify silent no-op behavior in a repo with no namespace, and that surfacing kicks in once a namespace + relevant cards exist.
 
 Exit criteria for Phase C are otherwise unchanged.
 
 ## 9. Success criteria (additive to PLAN.md §13)
 
-- Opening any host repo on the laptop surfaces the right `repos/<basename>` cards with no per-repo install.
+- Submitting a relevant prompt in any host repo surfaces the right `repos/<basename>` cards via UserPromptSubmit hook with no per-repo install.
 - A repo with no kernel namespace produces zero hook output.
+- A repo with a namespace but no matching cards for the prompt produces zero hook output.
 - `decisions.jsonl` accumulates one entry per triage call.
 - Codeburn report after a week of use shows ≥1 actionable signal about tier-routing accuracy.
 

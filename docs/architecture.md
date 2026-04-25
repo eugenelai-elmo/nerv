@@ -25,7 +25,7 @@ flowchart TB
     IDX["ai-kernel-index<br/>tier 0"]
     TRI{{"ai-kernel-triage<br/>THE DECIDER<br/>task.json → decision.json"}}
     AGT["ai-kernel-agent<br/>engine swap-point"]
-    SGT["ai-kernel-suggest<br/>SessionStart + PreToolUse"]
+    SGT["ai-kernel-suggest<br/>UserPromptSubmit hook"]
     SCN["ai-kernel-scan<br/>shadow-source deviation"]
     BRN["ai-kernel-burn<br/>codeburn wrapper"]
   end
@@ -46,8 +46,7 @@ flowchart TB
   MEM --> IDX --> INDEX
   CFG -.reads.-> IDX & TRI & AGT & SGT & SCN
 
-  HARNESS -- "SessionStart hook" --> SGT
-  HARNESS -- "PreToolUse hook" --> SGT
+  HARNESS -- "UserPromptSubmit hook<br/>(prompt as query)" --> SGT
   SGT -- "task.json" --> TRI
   SCN -- "task.json" --> TRI
   SHADOW --> SCN
@@ -98,7 +97,7 @@ sequenceDiagram
   participant M as Model<br/>(Haiku / Sonnet / Opus / Ollama)
   participant L as decisions.jsonl
 
-  H->>S: PreToolUse hook<br/>(query + $PWD)
+  H->>S: UserPromptSubmit hook<br/>(prompt JSON + $PWD)
   S->>S: scope = [global, repos/basename($PWD)]
   S->>T: task.json {kind, query, scope}
   T->>I: lookup by_tag / by_term / by_scope
@@ -134,7 +133,7 @@ flowchart LR
     end
 
     subgraph CC["~/.claude/settings.json"]
-      HOOKS["SessionStart + PreToolUse<br/>→ $AI_KERNEL_HOME/bin/ai-kernel-suggest"]
+      HOOKS["UserPromptSubmit<br/>→ $AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook"]
       ENVV["env: AI_KERNEL_HOME=…"]
     end
 

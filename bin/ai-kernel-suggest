@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# ai-kernel-suggest — SessionStart + PreToolUse hook entry-point.
+# ai-kernel-suggest — Claude Code hook entry-point + manual query CLI.
 #
 # Computes the default scope from $PWD basename, builds a task.json,
 # pipes it through ai-kernel-triage, and formats surfaced cards as a
 # <system-reminder> block on stdout. Silent no-op when no per-repo
-# namespace exists.
+# namespace exists or no cards match.
 #
 # Usage:
-#   ai-kernel-suggest --init              # SessionStart
-#   ai-kernel-suggest --query "<text>"    # PreToolUse
+#   ai-kernel-suggest --init                # manual: empty-query session ping
+#   ai-kernel-suggest --query "<text>"      # manual: explicit query
+#   ai-kernel-suggest --cc-prompt-hook      # CC UserPromptSubmit hook —
+#                                           # reads stdin JSON, extracts .prompt
 #
 # Override (for tests):
 #   AI_KERNEL_MEMORY_REPOS_ROOT — directory containing repos/<name>/ namespaces
@@ -26,11 +28,23 @@ while [[ $# -gt 0 ]]; do
     --query)
       [[ $# -ge 2 ]] || ak_die "--query requires a value"
       mode="query"; query="$2"; shift 2 ;;
+    --cc-prompt-hook)   mode="cc-prompt-hook"; shift ;;
     --include-personal) include_personal="true"; shift ;;
     --) shift; break ;;
     *) ak_die "unknown flag: $1" ;;
   esac
 done
+
+# CC UserPromptSubmit hook: read JSON from stdin, extract .prompt.
+# Hook input shape (CC docs):
+#   {"session_id":"...","cwd":"...","hook_event_name":"UserPromptSubmit","prompt":"..."}
+if [[ "$mode" == "cc-prompt-hook" ]]; then
+  hook_input="$(cat 2>/dev/null || true)"
+  [[ -z "$hook_input" ]] && exit 0
+  query="$(jq -r '.prompt // ""' <<<"$hook_input" 2>/dev/null || true)"
+  [[ -z "$query" ]] && exit 0
+  mode="query"
+fi
 
 # Resolve repo name and namespace dir.
 repo_name="$(basename "$PWD")"

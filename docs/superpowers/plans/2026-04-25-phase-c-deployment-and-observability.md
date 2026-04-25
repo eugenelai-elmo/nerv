@@ -26,6 +26,7 @@
 | `tests/test-suggest-noop.sh` | **create** | Smoke test that suggest returns nothing when no `repos/<x>/` namespace exists. |
 | `tests/test-suggest-surface.sh` | **create** | Smoke test that suggest surfaces a card from a seeded namespace. |
 | `tests/test-scan-deviation.sh` | **create** | Smoke test that scan reports a manufactured drift between shadow and canonical. |
+| `tests/test-suggest-cc-hook.sh` | **create** | Smoke test for `--cc-prompt-hook` mode (UserPromptSubmit JSON → query → cards). |
 | `tests/fixtures/` | **create** | Tiny fixture cards + shadow-source layout for tests. |
 
 **Testing approach:** No bats / no framework. Each `tests/test-*.sh` is a standalone bash script that exits non-zero on failure. Matches existing codebase style (zero test deps). Run with `bash tests/test-*.sh`.
@@ -696,12 +697,15 @@ git commit -m "feat(prompts): paste-able bootstrap for non-CC harnesses"
 
 ---
 
-## Task 7: Wire global hooks in `~/.claude/settings.json`
+## Task 7: Wire global UserPromptSubmit hook in `~/.claude/settings.json`
 
 **Files:**
 - Modify: `~/.claude/settings.json` (machine-local; not in repo)
+- Pre-req (already landed): `bin/ai-kernel-suggest --cc-prompt-hook` mode and `tests/test-suggest-cc-hook.sh`.
 
 This step is intentionally manual — `~/.claude/settings.json` is per-machine and not committed to the kernel repo.
+
+**Hook choice:** `UserPromptSubmit` only. Originally specced as SessionStart + PreToolUse; revised after token-cost analysis (see spec §1). UserPromptSubmit is the only hook that fires with real user intent (the prompt text itself), making it the natural query carrier.
 
 - [ ] **Step 1: Verify path resolution**
 
@@ -712,7 +716,7 @@ Set this as `AI_KERNEL_HOME` in the next step.
 
 - [ ] **Step 2: Edit `~/.claude/settings.json`**
 
-Add to the existing settings file (merge, do not overwrite):
+Merge (do not overwrite) the existing settings file with:
 
 ```jsonc
 {
@@ -720,21 +724,12 @@ Add to the existing settings file (merge, do not overwrite):
     "AI_KERNEL_HOME": "/Users/eugene.lai/Projects/ai-kernel"
   },
   "hooks": {
-    "SessionStart": [
+    "UserPromptSubmit": [
       {
         "matcher": "*",
         "hooks": [
           { "type": "command",
-            "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest --init" }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          { "type": "command",
-            "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest --query \"$CLAUDE_TOOL_INPUT\"" }
+            "command": "$AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook" }
         ]
       }
     ]
@@ -742,7 +737,9 @@ Add to the existing settings file (merge, do not overwrite):
 }
 ```
 
-- [ ] **Step 3: Smoke-test the hook in a repo with a namespace**
+The `--cc-prompt-hook` mode reads CC's UserPromptSubmit JSON from stdin, extracts the `.prompt` field, and surfaces relevant cards. Silent no-op on empty prompt, malformed JSON, missing namespace, or zero matches.
+
+- [ ] **Step 3: Smoke-test the hook with manual stdin injection**
 
 ```bash
 mkdir -p $AI_KERNEL_HOME/memory/repos/scratch-test
@@ -752,14 +749,15 @@ id: scratch-sample
 title: scratch namespace test card
 scope: repo
 type: knowledge
-tags: [smoke-test]
+tags: [datetime, smoke-test]
 ---
-This is a smoke test card.
+Datetime convention smoke test.
 EOF
 $AI_KERNEL_HOME/bin/ai-kernel-index >/dev/null
 
 mkdir -p /tmp/scratch-test && cd /tmp/scratch-test
-$AI_KERNEL_HOME/bin/ai-kernel-suggest --query "smoke-test"
+echo '{"hook_event_name":"UserPromptSubmit","prompt":"how do we handle datetime"}' \
+  | $AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook
 ```
 
 Expected: a `<system-reminder>` block listing `scratch-sample [repo]`.
@@ -768,7 +766,8 @@ Expected: a `<system-reminder>` block listing `scratch-sample [repo]`.
 
 ```bash
 mkdir -p /tmp/no-namespace-here && cd /tmp/no-namespace-here
-out="$($AI_KERNEL_HOME/bin/ai-kernel-suggest --query smoke-test)"
+out="$(echo '{"hook_event_name":"UserPromptSubmit","prompt":"datetime"}' \
+  | $AI_KERNEL_HOME/bin/ai-kernel-suggest --cc-prompt-hook)"
 [[ -z "$out" ]] && echo "OK silent" || echo "FAIL: got $out"
 ```
 
@@ -776,7 +775,7 @@ Expected: `OK silent`.
 
 - [ ] **Step 5: Open a fresh Claude Code session in `/tmp/scratch-test`**
 
-Verify the SessionStart hook fires and the system-reminder appears in the new session's first turn.
+Submit a prompt mentioning "datetime". Verify the system-reminder block appears as additional context in the agent's view of the turn.
 
 - [ ] **Step 6: Cleanup scratch fixtures**
 

@@ -75,30 +75,36 @@ decision="$(printf '%s' "$task" | "$AI_KERNEL_ROOT/bin/ai-kernel-triage" \
 card_count="$(jq -r '.surface_cards | length' <<<"$decision")"
 [[ "$card_count" == "0" ]] && exit 0
 
-# One jq pass over the index to look up title + scope for every surfaced card.
-# Emits TAB-separated "id<TAB>scope<TAB>title" lines. Fallbacks: scope="?",
-# title=id. If jq fails entirely (e.g. malformed index), fall back to id-only.
+# One jq pass over the index to look up title + scope + category + path for
+# every surfaced card. Emits TAB-separated "id<TAB>scope<TAB>category<TAB>title<TAB>path"
+# lines. Fallbacks: scope="?", category="—", title=id, path="" — so a malformed
+# card never breaks the surfacing.
 rows="$(jq -r --argjson dec "$decision" '
   ($dec.surface_cards) as $ids
   | .cards as $cards
   | $ids[]
   | . as $id
-  | [$id, ($cards[$id].scope // "?"), ($cards[$id].title // $id)]
+  | [$id,
+     ($cards[$id].scope // "?"),
+     ($cards[$id].category // "—" | if . == "" then "—" else . end),
+     ($cards[$id].title // $id),
+     ($cards[$id].path // "")]
   | @tsv
-' "$AI_KERNEL_INDEX" 2>/dev/null || jq -r '.surface_cards[] | [., "?", .] | @tsv' <<<"$decision")"
+' "$AI_KERNEL_INDEX" 2>/dev/null || jq -r '.surface_cards[] | [., "?", "—", ., ""] | @tsv' <<<"$decision")"
 
 {
   printf '<system-reminder>\n'
   printf 'AI Kernel — relevant memory cards for repo "%s"%s:\n' "$repo_name" \
     "$([[ -n "$query" ]] && printf ' (query: %s)' "$query")"
-  while IFS=$'\t' read -r id scope title; do
+  while IFS=$'\t' read -r id scope category title path; do
     [[ -z "$id" ]] && continue
     # Sanitize title for system-reminder safety.
     title="${title//$'\n'/ }"
     title="${title//$'\r'/ }"
     title="${title//<\/system-reminder>/[sr]}"
-    printf '  - %s [%s] — %s\n' "$id" "$scope" "$title"
+    printf '  - %s [%s/%s] — %s\n' "$id" "$scope" "$category" "$title"
+    [[ -n "$path" ]] && printf '    path: %s\n' "$path"
   done <<<"$rows"
-  printf 'Query via: %s/bin/ai-kernel-triage\n' "$AI_KERNEL_ROOT"
+  printf 'Fetch a card body: %s/bin/ai-kernel-card <id>\n' "$AI_KERNEL_ROOT"
   printf '</system-reminder>\n'
 }

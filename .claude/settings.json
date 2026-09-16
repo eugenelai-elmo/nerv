@@ -1,0 +1,17 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/require-eff-review.sh",
+                        "description": "MANDATORY FE Phase 7.5 gate: block git push of a FLOW-/HOR- feature branch until a committed, fresh specs/<TICKET>/eff-review-findings.json exists"
+                    }
+                ]
+            }
+        ]
+    }
+}

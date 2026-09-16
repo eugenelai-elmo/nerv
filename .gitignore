@@ -1,23 +1,19 @@
-# Go CLI (legacy) build artifacts
-/ai-kernel
-/ai-kernel-*
-*.test
+# Symlinks to other repos (machine-specific absolute paths)
+.ai
+.claude/commands
+.claude/hooks
+.claude/worktrees
+.claude/schemas
+.claude/related-repos.json
+.claude/flowmo.config.json
+.claude/skills/
 
-# User's active config (paths are machine-specific)
-/config.local.yaml
+# Machine-specific config
+.mcp.json
+.claude/settings.local.json
 
-# Derived — regenerate with bin/ai-kernel-index
-/index.json
+# Ephemeral state
+radar/
 
-# Per-repo scoped memory — don't leak internal context
-# (memory/ namespace lives; contents stay local)
-/memory/repos/
-
-# Personal memory — truly private
-/memory/personal/
-
-# Triage decision log — append-only, machine-local
-/decisions.jsonl
-
-# Scanner output — derived
-/deviation-report.json
+# Old ai-kernel memory (superseded by CLAUDE.md auto-memory)
+memories/

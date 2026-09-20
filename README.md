@@ -1,8 +1,8 @@
-# AI Kernel — Command Seat
+# NERV — Command Seat
 
-Cross-repo command seat for Claude Code sessions. Manages engineering leadership skills, initiative state, and sprint tooling across all repos.
+Cross-repo command seat for Claude Code sessions. Manager stack skills, initiative state, sprint tooling, and the observatory (deep observability).
 
-Previously a memory substrate experiment (archived at `archive/memory-substrate-v1`). Revived Sep 2026 as the versioned home for the manager stack.
+Previously `ai-kernel` (memory substrate experiment, archived at `archive/memory-substrate-v1`). Revived and renamed Sep 2026.
 
 ## Structure
 
@@ -11,6 +11,9 @@ CLAUDE.md                         # Command seat project instructions
 skills/                           # Manager stack skills (versioned here)
   sitrep/SKILL.md                 # Morning briefing / mid-day catch-up
   sprint/SKILL.md                 # Sprint planning + refinement
+spikes/                           # Exploration spikes (Jev, etc.)
+observatory/                      # Deep observability workspace (ex command-centre)
+  CLAUDE.md                       # 34KB observability context (ES, SonarQube, MF health)
 initiatives/                      # Cross-repo initiative state
 .claude/                          # Claude Code config
   settings.json                   # Project settings (non-secret)
@@ -21,9 +24,18 @@ initiatives/                      # Cross-repo initiative state
 
 Skills in `skills/` are made available to Claude Code via symlinks from `~/.claude/skills/`:
 ```bash
-ln -s ~/projects/ai-kernel/skills/sitrep ~/.claude/skills/sitrep
-ln -s ~/projects/ai-kernel/skills/sprint ~/.claude/skills/sprint
+ln -s ~/projects/nerv/skills/sitrep ~/.claude/skills/sitrep
+ln -s ~/projects/nerv/skills/sprint ~/.claude/skills/sprint
 ```
+
+## Launch
+
+```bash
+cd ~/projects/nerv && claude          # command seat (daily ops)
+cd ~/projects/nerv/observatory && claude  # deep observability dive
+```
+
+`~/.ai/` symlinks here for backward compatibility.
 
 ## Initiative Structure
 
@@ -39,6 +51,7 @@ Each initiative folder contains:
 |---|---|---|
 | `initiatives/` | Mutable working state for long-running efforts | Repo-specific execution artifacts |
 | `skills/` | Manager stack skill definitions (versioned) | Repo-level dev skills (those stay in their repos) |
+| `observatory/` | Deep observability context and queries | Daily quick-pulse (that's sitrep) |
 | Per-repo `.ai/` | Repo-specific execution state | Initiative-level context |
 | Claude Code memory | User preferences, feedback rules, references | Initiative working state |
 

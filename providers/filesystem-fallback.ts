@@ -1,22 +1,16 @@
 import { readFile, writeFile, readdir, mkdir, stat } from 'node:fs/promises'
-import { join, dirname, relative } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { MemoryProvider, MemoryTier, MemoryEntry } from '../lib/types.js'
 
 const NERV_ROOT = join(homedir(), 'projects', 'nerv')
 
-const TIER_DIRS: Record<string, string[]> = {
-  'initiatives': ['initiatives'],
-  'skills': ['skills', '.claude/skills'],
-  'observatory': ['observatory'],
-  'memories': ['memories'],
-  'radar': ['radar'],
-}
-
 function resolvePath(path: string): string {
-  if (path.startsWith('/')) return path
-  if (path.startsWith('~/')) return join(homedir(), path.slice(2))
-  return join(NERV_ROOT, path)
+  const resolved = resolve(NERV_ROOT, path)
+  if (!resolved.startsWith(NERV_ROOT)) {
+    throw new Error(`Path traversal denied: ${path} resolves outside NERV_ROOT`)
+  }
+  return resolved
 }
 
 async function fileExists(p: string): Promise<boolean> {

@@ -52,6 +52,7 @@ function timedResult(provider: string, start: number, data?: unknown): DeviceRes
 
 const provider: DeviceProvider = {
   name: 'artemis',
+  tier: 'raw',
 
   async listDevices(): Promise<DeviceInfo[]> {
     const output = await adb(['devices', '-l'])

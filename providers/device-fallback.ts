@@ -11,6 +11,7 @@ function notAvailable(action: string): DeviceResult {
 
 const provider: DeviceProvider = {
   name: 'device-fallback',
+  tier: 'fallback',
 
   async listDevices(): Promise<DeviceInfo[]> {
     console.warn('[device-fallback] No device provider — install ARTEMIS or connect ADB')

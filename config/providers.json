@@ -12,7 +12,7 @@
     "config": {}
   },
   "device": {
-    "provider": "device-fallback",
+    "provider": "argent",
     "config": {}
   },
   "session": {

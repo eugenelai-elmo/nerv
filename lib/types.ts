@@ -95,7 +95,7 @@ export interface MemoryProvider {
   list(prefix: string): Promise<string[]>
 }
 
-// Device
+// Mobile Automation
 
 export interface DeviceInfo {
   id: string
@@ -117,8 +117,11 @@ export interface DeviceResult {
   data?: unknown
 }
 
+export type MobileProviderTier = 'workflow' | 'raw' | 'fallback'
+
 export interface DeviceProvider {
   name: string
+  tier: MobileProviderTier
   listDevices(): Promise<DeviceInfo[]>
   screenshot(deviceId?: string): Promise<Screenshot>
   tap(x: number, y: number, deviceId?: string): Promise<DeviceResult>
@@ -178,7 +181,7 @@ export interface ProviderConfig {
     config: Record<string, string>
   }
   device: {
-    provider: 'artemis' | 'device-fallback'
+    provider: 'argent' | 'artemis' | 'device-fallback'
     config: Record<string, string>
   }
   session: {

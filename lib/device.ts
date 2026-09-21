@@ -15,16 +15,27 @@ async function loadProvider(name: string): Promise<DeviceProvider> {
   return mod.default
 }
 
+const FALLBACK_CHAIN: Record<string, string> = {
+  'argent': 'artemis',
+  'artemis': 'device-fallback',
+}
+
 async function getProvider(): Promise<DeviceProvider> {
   const config = await loadConfig()
-  const providerName = config.device.provider
-  try {
-    return await loadProvider(providerName)
-  } catch (err) {
-    if (providerName === 'device-fallback') throw err
-    console.error(`[device] ${providerName} failed: ${(err as Error).message}, falling back`)
-    return await loadProvider('device-fallback')
+  let providerName: string = config.device.provider
+
+  while (providerName) {
+    try {
+      return await loadProvider(providerName)
+    } catch (err) {
+      const next = FALLBACK_CHAIN[providerName]
+      if (!next) throw err
+      console.error(`[device] ${providerName} failed: ${(err as Error).message}, falling back to ${next}`)
+      providerName = next
+    }
   }
+
+  return await loadProvider('device-fallback')
 }
 
 export async function listDevices(): Promise<DeviceInfo[]> {

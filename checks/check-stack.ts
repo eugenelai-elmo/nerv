@@ -267,7 +267,7 @@ await check(4, 'OpenViking reachable', async () => {
   }
 })
 
-// ── Layer 5: Device ────────────────────────────────────────────────
+// ── Layer 5: Mobile Automation ─────────────────────────────────────
 
 await check(5, 'Device contract loads', async () => {
   const mod = await import(join(ROOT, 'lib', 'device.js'))
@@ -277,35 +277,40 @@ await check(5, 'Device contract loads', async () => {
   return { status: 'pass', message: `All ${fns.length} device functions exported` }
 })
 
-await check(5, 'ADB installed', async () => {
+await check(5, 'Argent MCP configured', async () => {
+  const repos = [
+    join(homedir(), 'Projects', 'elmo-learning-mobile-app'),
+    join(homedir(), 'Projects', 'rg-mobile-app'),
+  ]
+  for (const repo of repos) {
+    try {
+      const raw = await readFile(join(repo, '.mcp.json'), 'utf-8')
+      const mcp = JSON.parse(raw)
+      const hasArgent = Object.keys(mcp.mcpServers ?? mcp).some((k: string) => k.includes('argent'))
+      if (hasArgent) return { status: 'pass', message: `Argent MCP in ${repo}` }
+    } catch { continue }
+  }
+  return { status: 'skip', message: 'No Argent MCP found — run argent init in a mobile repo' }
+})
+
+await check(5, 'iOS Simulator available', async () => {
+  try {
+    const { stdout } = await exec('xcrun', ['simctl', 'list', 'devices', 'booted'], { timeout: 5_000 })
+    const booted = stdout.split('\n').filter(l => l.includes('Booted'))
+    if (booted.length > 0) return { status: 'pass', message: `${booted.length} booted: ${booted[0].trim()}` }
+    return { status: 'skip', message: 'Xcode installed but no simulator running' }
+  } catch {
+    return { status: 'skip', message: 'Xcode / simctl not available' }
+  }
+})
+
+await check(5, 'ADB installed (Android)', async () => {
   try {
     const { stdout } = await exec('adb', ['version'], { timeout: 3_000 })
     const version = stdout.split('\n')[0]
     return { status: 'pass', message: version }
   } catch {
-    return { status: 'skip', message: 'ADB not found — install Android SDK for device automation' }
-  }
-})
-
-await check(5, 'ADB devices connected', async () => {
-  try {
-    const { stdout } = await exec('adb', ['devices'], { timeout: 5_000 })
-    const lines = stdout.split('\n').slice(1).filter(l => l.trim() && l.includes('device'))
-    if (lines.length === 0) return { status: 'skip', message: 'No devices/emulators connected' }
-    return { status: 'pass', message: `${lines.length} device(s) connected` }
-  } catch {
-    return { status: 'skip', message: 'ADB not available' }
-  }
-})
-
-await check(5, 'ARTEMIS MCP reachable', async () => {
-  const url = process.env.ARTEMIS_MCP_URL ?? 'http://localhost:8700'
-  try {
-    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })
-    if (res.ok) return { status: 'pass', message: `ARTEMIS MCP at ${url}` }
-    return { status: 'warn', message: `ARTEMIS ${res.status} at ${url}` }
-  } catch {
-    return { status: 'skip', message: `ARTEMIS not running at ${url} (Layer 5 optional — device fallback active)` }
+    return { status: 'skip', message: 'ADB not found — iOS-only is fine for now' }
   }
 })
 
@@ -350,7 +355,7 @@ let currentLayer = -1
 for (const r of results) {
   if (r.layer !== currentLayer) {
     currentLayer = r.layer
-    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Device (ARTEMIS)', 'Decisions']
+    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Mobile (Argent+ARTEMIS)', 'Decisions']
     console.log(`\n\x1b[1mLayer ${r.layer}: ${layerNames[r.layer]}\x1b[0m`)
   }
   const latency = r.latencyMs > 0 ? ` \x1b[90m${r.latencyMs}ms\x1b[0m` : ''
@@ -382,7 +387,7 @@ for (const r of results) {
   else if (!layerStatus.has(r.layer)) layerStatus.set(r.layer, r.status)
 }
 
-const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Device', 'L6 Decisions']
+const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Mobile', 'L6 Decisions']
 console.log('')
 for (const [layer, status] of layerStatus) {
   console.log(`  ${icon(status)} ${layerNames[layer]}`)

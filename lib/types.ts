@@ -146,6 +146,22 @@ export interface SessionProvider {
   status(): Promise<{ running: boolean; socketPath: string }>
 }
 
+// Decision
+
+export interface DecisionDefinition {
+  name: string
+  description: string
+  dimensions: Dimension[]
+  thresholds?: Record<string, number>
+}
+
+export interface DecisionResult {
+  decision: string
+  scores: DimensionScore[]
+  provider: string
+  latencyMs: number
+}
+
 // Config
 
 export interface ProviderConfig {

@@ -1,0 +1,33 @@
+{
+  "name": "module-routing",
+  "description": "Given a prompt, decide which repo or module it's about. Routes to the right workspace before Claude starts exploring.",
+  "dimensions": [
+    {
+      "name": "target_repo",
+      "question": {
+        "type": "choice",
+        "instructions": "Which repository is this task primarily about?",
+        "criteria": {
+          "elmo-application": "Nx monorepo — platform frontend (React/TypeScript, module federation)",
+          "elmo-design-system": "@eds/react component library",
+          "performance-management-system": "PMS backend",
+          "platform-common": "Shared backend/infra",
+          "elmo-shared-jenkinslib": "CI/CD shared library",
+          "elmo-application-lambda-router": "Lambda routing layer",
+          "flowmo": "Flowmo agent tooling",
+          "nerv": "NERV agentic substrate / command seat",
+          "mobile": "React Native mobile app (ELMO or RG)",
+          "cross-repo": "Spans multiple repositories"
+        }
+      }
+    },
+    {
+      "name": "confidence",
+      "question": {
+        "type": "score",
+        "instructions": "How confident are you about the repo selection? Low confidence means the prompt is ambiguous or could apply to multiple repos.",
+        "criteria": ["very uncertain", "somewhat uncertain", "moderate", "fairly confident", "very confident"]
+      }
+    }
+  ]
+}

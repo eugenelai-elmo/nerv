@@ -309,6 +309,37 @@ await check(5, 'ARTEMIS MCP reachable', async () => {
   }
 })
 
+// ── Decisions ──────────────────────────────────────────────────────
+
+await check(6, 'Decision registry loads', async () => {
+  const { listDecisions } = await import(join(ROOT, 'lib', 'decide.js'))
+  const decisions = await listDecisions()
+  if (decisions.length === 0) return { status: 'fail', message: 'No decisions found in decisions/' }
+  return { status: 'pass', message: `${decisions.length} decisions: ${decisions.join(', ')}` }
+})
+
+await check(6, 'All decision JSONs parse', async () => {
+  const { listDecisions, loadDecision } = await import(join(ROOT, 'lib', 'decide.js'))
+  const decisions = await listDecisions() as string[]
+  const errors: string[] = []
+  for (const name of decisions) {
+    try {
+      const def = await loadDecision(name)
+      if (!def.dimensions || def.dimensions.length === 0) errors.push(`${name}: no dimensions`)
+    } catch (err) {
+      errors.push(`${name}: ${(err as Error).message}`)
+    }
+  }
+  if (errors.length > 0) return { status: 'fail', message: errors.join('; ') }
+  return { status: 'pass', message: `All ${decisions.length} decisions valid` }
+})
+
+await check(6, 'decide() contract loads', async () => {
+  const { decide } = await import(join(ROOT, 'lib', 'decide.js'))
+  if (typeof decide !== 'function') return { status: 'fail', message: 'decide is not a function' }
+  return { status: 'pass', message: 'decide() exported' }
+})
+
 // ── Report ─────────────────────────────────────────────────────────
 
 console.log('')
@@ -319,7 +350,7 @@ let currentLayer = -1
 for (const r of results) {
   if (r.layer !== currentLayer) {
     currentLayer = r.layer
-    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Device (ARTEMIS)']
+    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Device (ARTEMIS)', 'Decisions']
     console.log(`\n\x1b[1mLayer ${r.layer}: ${layerNames[r.layer]}\x1b[0m`)
   }
   const latency = r.latencyMs > 0 ? ` \x1b[90m${r.latencyMs}ms\x1b[0m` : ''
@@ -351,7 +382,7 @@ for (const r of results) {
   else if (!layerStatus.has(r.layer)) layerStatus.set(r.layer, r.status)
 }
 
-const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Device']
+const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Device', 'L6 Decisions']
 console.log('')
 for (const [layer, status] of layerStatus) {
   console.log(`  ${icon(status)} ${layerNames[layer]}`)

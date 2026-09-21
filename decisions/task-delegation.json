@@ -1,0 +1,36 @@
+{
+  "name": "task-delegation",
+  "description": "Eugene's leadership decision tree: route incoming work to the right action (do it, delegate it, escalate it, or decline). Encodes the TL prioritisation framework.",
+  "dimensions": [
+    {
+      "name": "action",
+      "question": {
+        "type": "choice",
+        "instructions": "Eugene is an engineering lead for frontend and mobile. Given this incoming task/request/meeting/question, what should Eugene do with it?",
+        "criteria": {
+          "do-it-technical": "This is a technical decision or architecture call — Eugene should handle it directly",
+          "do-it-unblock": "This is unblocking an engineer — Eugene should handle it now to keep them moving",
+          "escalate-people": "This is a people, performance, or management issue — flag to Ning Ning (Eugene's manager)",
+          "redirect-product": "This is a product scope or requirements question — push to Maulik or Nathan",
+          "delegate": "This is testing, QA, admin, or operational work — delegate to the team",
+          "decline-meeting": "This is a meeting where Eugene is not the decision-maker — decline or send a delegate"
+        }
+      }
+    },
+    {
+      "name": "urgency",
+      "question": {
+        "type": "score",
+        "instructions": "How urgent is this? Consider: is someone blocked right now, is there a deadline today, is production down, or can it wait for the next sprint/standup?",
+        "criteria": ["can wait days", "this week", "today", "within the hour", "drop everything"]
+      }
+    },
+    {
+      "name": "is_eugene_only",
+      "question": {
+        "type": "noul",
+        "instructions": "Is Eugene the only person who can handle this? Consider: does it require his specific context, permissions, relationships, or architectural knowledge that nobody else on the team has?"
+      }
+    }
+  ]
+}

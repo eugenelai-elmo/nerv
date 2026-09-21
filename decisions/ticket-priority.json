@@ -1,0 +1,48 @@
+{
+  "name": "ticket-priority",
+  "description": "Score a ticket across multiple priority dimensions for sprint planning. Replaces manual story pointing with calibrated multi-dimensional assessment.",
+  "dimensions": [
+    {
+      "name": "business_value",
+      "question": {
+        "type": "score",
+        "instructions": "How much business value does completing this ticket deliver? Consider: user impact, revenue impact, unblocking other work, compliance requirements.",
+        "criteria": ["negligible", "low", "medium", "high", "critical"]
+      }
+    },
+    {
+      "name": "engineering_effort",
+      "question": {
+        "type": "score",
+        "instructions": "How much engineering effort is required? Consider: number of files changed, cross-team dependencies, testing complexity, review burden.",
+        "criteria": ["trivial — minutes", "small — hours", "medium — 1-2 days", "large — 3-5 days", "epic — over a week"]
+      }
+    },
+    {
+      "name": "is_blocking",
+      "question": {
+        "type": "noul",
+        "instructions": "Is this ticket blocking other tickets, other teams, or a release? Consider explicit blockers, implicit dependencies, and deadline pressure."
+      }
+    },
+    {
+      "name": "risk",
+      "question": {
+        "type": "score",
+        "instructions": "How risky is this change? Consider: touches production, affects auth/payments, involves data migration, changes shared infrastructure.",
+        "criteria": ["no risk", "low risk", "moderate risk", "high risk", "critical risk"]
+      }
+    },
+    {
+      "name": "is_tech_debt",
+      "question": {
+        "type": "noul",
+        "instructions": "Is this primarily a tech debt / refactoring / maintenance ticket rather than a feature or bug fix?"
+      }
+    }
+  ],
+  "thresholds": {
+    "auto_prioritize_value": 3,
+    "effort_warn": 3
+  }
+}

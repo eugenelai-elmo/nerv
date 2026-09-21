@@ -1,0 +1,29 @@
+{
+  "name": "audience-detection",
+  "description": "Detect who the response is for and adjust tone/depth accordingly. Technical peer gets terse code-focused answers. Stakeholder gets context and impact framing.",
+  "dimensions": [
+    {
+      "name": "audience",
+      "question": {
+        "type": "choice",
+        "instructions": "Based on the prompt and context, who is the likely audience for the response?",
+        "criteria": {
+          "self": "Eugene working solo — terse, skip explanations, just do the thing",
+          "technical-peer": "Another engineer — show code, skip business context, be direct",
+          "tech-lead": "Engineering lead or architect — balance code with design rationale",
+          "product": "Product manager or designer — explain impact, skip implementation details",
+          "stakeholder": "Executive or cross-functional stakeholder — focus on outcomes, timeline, risk",
+          "external": "External documentation, PR description, or public-facing text"
+        }
+      }
+    },
+    {
+      "name": "formality",
+      "question": {
+        "type": "score",
+        "instructions": "How formal should the tone be?",
+        "criteria": ["casual/whiteboard", "conversational", "professional", "formal document", "executive brief"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "context-loading",
+  "description": "Given a prompt and a list of files/docs, decide which ones to load into context. Reduces token waste by not loading irrelevant files.",
+  "dimensions": [
+    {
+      "name": "relevance",
+      "question": {
+        "type": "score",
+        "instructions": "How relevant is this file/document to the user's current task? Consider the prompt, the file path, and what the file likely contains.",
+        "criteria": ["irrelevant", "tangential", "somewhat relevant", "directly relevant", "essential"]
+      }
+    },
+    {
+      "name": "is_stale",
+      "question": {
+        "type": "noul",
+        "instructions": "Is this file likely stale or outdated relative to the current task? Consider last-modified dates, whether it references superseded patterns, or if the task is about changing this very file."
+      }
+    }
+  ],
+  "thresholds": {
+    "relevance_min": 2
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "pr-file-triage",
+  "description": "Score PR files by review priority. Focus deep review on high-risk files, rubber-stamp low-risk ones like config or generated code.",
+  "dimensions": [
+    {
+      "name": "review_priority",
+      "question": {
+        "type": "score",
+        "instructions": "How carefully does this file change need to be reviewed? Consider: is it business logic, a test, config, generated code, or a type definition? Does it touch auth, payments, permissions, or data migration?",
+        "criteria": ["rubber-stamp", "quick scan", "normal review", "careful review", "critical — security or data"]
+      }
+    },
+    {
+      "name": "is_generated",
+      "question": {
+        "type": "noul",
+        "instructions": "Is this file generated code, auto-formatted output, lock file changes, or schema output that doesn't need human review?"
+      }
+    },
+    {
+      "name": "touches_auth",
+      "question": {
+        "type": "noul",
+        "instructions": "Does this file change touch authentication, authorization, permissions, capabilities, or security-related code?"
+      }
+    }
+  ],
+  "thresholds": {
+    "deep_review_min": 3
+  }
+}

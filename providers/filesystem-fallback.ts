@@ -1,14 +1,33 @@
-import { readFile, writeFile, readdir, mkdir, stat } from 'node:fs/promises'
-import { join, dirname, resolve } from 'node:path'
+import { readFile, writeFile, readdir, mkdir, stat, realpath } from 'node:fs/promises'
+import { join, dirname, resolve, sep } from 'node:path'
 import { homedir } from 'node:os'
 import type { MemoryProvider, MemoryTier, MemoryEntry } from '../lib/types.js'
 
 const NERV_ROOT = join(homedir(), 'projects', 'nerv')
+const NERV_ROOT_PREFIX = NERV_ROOT + sep
+
+function isInsideNervRoot(resolved: string): boolean {
+  return resolved === NERV_ROOT || resolved.startsWith(NERV_ROOT_PREFIX)
+}
 
 function resolvePath(path: string): string {
+  if (/\0/.test(path)) throw new Error('Path contains null bytes')
   const resolved = resolve(NERV_ROOT, path)
-  if (!resolved.startsWith(NERV_ROOT)) {
+  if (!isInsideNervRoot(resolved)) {
     throw new Error(`Path traversal denied: ${path} resolves outside NERV_ROOT`)
+  }
+  return resolved
+}
+
+async function resolveAndVerifyReal(path: string): Promise<string> {
+  const resolved = resolvePath(path)
+  try {
+    const real = await realpath(dirname(resolved))
+    if (!isInsideNervRoot(real)) {
+      throw new Error(`Symlink escape denied: ${path} resolves to ${real} via symlink`)
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
   }
   return resolved
 }
@@ -86,7 +105,7 @@ const provider: MemoryProvider = {
   },
 
   async save(path: string, payload: string): Promise<void> {
-    const resolved = resolvePath(path)
+    const resolved = await resolveAndVerifyReal(path)
     await mkdir(dirname(resolved), { recursive: true })
     await writeFile(resolved, payload, 'utf-8')
   },

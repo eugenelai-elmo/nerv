@@ -101,6 +101,7 @@ const provider: DeviceProvider = {
   async typeText(text: string, deviceId?: string): Promise<DeviceResult> {
     const start = performance.now()
     if (text.length > 500) throw new Error('Text too long for adb input (max 500 chars)')
+    if (!/^[\w .,!?@:/#-]*$/.test(text)) throw new Error('Text contains disallowed characters for adb input')
     const escaped = text.replace(/ /g, '%s')
     await adb(['shell', 'input', 'text', escaped], deviceId)
     return timedResult('artemis', start)

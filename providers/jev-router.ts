@@ -75,7 +75,7 @@ const provider = {
         const answer = answers[skill.name]
         if (!answer) continue
         const prob = answer.noul ?? 0
-        if (prob > 0.4) {
+        if (prob > 0.6) {
           allMatches.push({
             name: skill.name,
             confidence: prob,

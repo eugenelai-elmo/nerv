@@ -5,7 +5,12 @@
   "scripts": {
     "score": "npx tsx spikes/jev-sprint-scorer.ts",
     "check": "npx tsx checks/check-stack.ts",
-    "check:verbose": "npx tsx checks/check-stack.ts --verbose"
+    "check:verbose": "npx tsx checks/check-stack.ts --verbose",
+    "mobile": "npx tsx commands/mobile.ts",
+    "mobile:start": "npx tsx commands/mobile.ts start",
+    "mobile:start:ios": "npx tsx commands/mobile.ts start ios",
+    "mobile:start:android": "npx tsx commands/mobile.ts start android",
+    "mobile:stop": "npx tsx commands/mobile.ts stop"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

@@ -1,0 +1,13 @@
+{
+  "name": "nerv",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "score": "npx tsx spikes/jev-sprint-scorer.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

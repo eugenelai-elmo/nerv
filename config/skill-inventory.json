@@ -1,0 +1,362 @@
+{
+  "$comment": "Skill inventory for the Jev skill router. Scanned 2026-09-21.",
+  "skills": [
+    {
+      "name": "sitrep",
+      "description": "Morning briefing or mid-day catch-up. Synthesizes radar, inbox, handoff, git, PRs, and prod health into one prioritized view.",
+      "platform": "any",
+      "source": "nerv",
+      "triggerPatterns": ["sitrep", "morning", "catch up", "priorities", "what now"]
+    },
+    {
+      "name": "sprint",
+      "description": "Sprint planning and refinement. Pull tickets, cross-reference OKRs, score on risk/value/urgency/customer-impact, produce prioritised artifact.",
+      "platform": "any",
+      "source": "nerv",
+      "triggerPatterns": ["sprint", "refinement", "planning", "tickets", "prioritise"]
+    },
+    {
+      "name": "inbox",
+      "description": "ELMO Inbox operating system — smart priority, capture, reconciliation, 1:1 prep, standup, and weekly review over Obsidian vault.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["inbox", "what should I do", "standup", "weekly review", "1:1 prep"]
+    },
+    {
+      "name": "breakdown",
+      "description": "Initiative work decomposition — T-shirt sizing, dependency graphs, sprint slicing, and feasibility verdicts.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["breakdown", "decompose", "initiative", "feasibility", "sprint slice"]
+    },
+    {
+      "name": "tone-of-voice",
+      "description": "Rewrites messages in Eugene's voice — friendly, plain-spoken technical leadership. For PRs, Jira tickets, Slack, emails, docs.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["tone", "rewrite", "make readable", "fix tone", "voice"]
+    },
+    {
+      "name": "caveman",
+      "description": "Ultra-compressed communication mode. Cuts token usage ~75% while keeping full technical accuracy.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["caveman", "less tokens", "be brief", "compress"]
+    },
+    {
+      "name": "caveman-review",
+      "description": "Ultra-compressed code review comments. One line per comment: location, problem, fix.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["review", "code review", "caveman review", "compressed review"]
+    },
+    {
+      "name": "caveman-commit",
+      "description": "Ultra-compressed commit message generator. Conventional Commits, subject ≤50 chars.",
+      "platform": "any",
+      "source": "user",
+      "triggerPatterns": ["commit", "commit message", "generate commit"]
+    },
+    {
+      "name": "eff-review",
+      "description": "Review an Elmo frontend PR, branch, or diff. Audits against @eds/@eff patterns and Elmo workspace conventions.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["review PR", "eff review", "audit branch", "diff review", "conventions"]
+    },
+    {
+      "name": "eff-designreview",
+      "description": "Designer's expert pass on a running page. Screenshots at 3 viewports + DOM scan, reviewed against 8 design dimensions.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["design review", "visual review", "spacing", "does this look right"]
+    },
+    {
+      "name": "eds-tokens",
+      "description": "ELMO Design System (EDS4) complete reference. Token values, @eds/react component library, Figma specs, import paths.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["design system", "eds", "token", "colour", "spacing", "component"]
+    },
+    {
+      "name": "design-prototype",
+      "description": "Build page prototypes for non-frontend contributors. React pages using @eds/react + @eff/components with mock data.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["prototype", "mock up", "scaffold page", "design prototype"]
+    },
+    {
+      "name": "elmo-application-frontend",
+      "description": "Elmo frontend orientation — architecture tiers, permissions, tooling, testing, module boundaries, Nx monorepo.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["frontend", "elmo application", "Nx", "monorepo", "module boundary"]
+    },
+    {
+      "name": "figma-eds-audit",
+      "description": "Audits a Figma design frame for ELMO Design System component coverage. Classifies nodes as EDS or non-EDS.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["figma audit", "EDS coverage", "component compliance", "design system coverage"]
+    },
+    {
+      "name": "figma-mcp-workflow",
+      "description": "Operational runbook for Figma MCP read AND write operations. Rendering, font loading, dual-frame workflow.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["figma", "render figma", "figma MCP", "translate figma"]
+    },
+    {
+      "name": "ui-implementation-audit",
+      "description": "Converts Figma frames and ticket context into an execution-grade UI Implementation Brief with TDD scope.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["UI brief", "implementation audit", "design handoff", "frontend spec"]
+    },
+    {
+      "name": "kibana",
+      "description": "Query Elasticsearch for frontend errors, backend exceptions, and application logs. Investigate production issues.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["kibana", "logs", "errors", "production", "elasticsearch"]
+    },
+    {
+      "name": "launchdarkly",
+      "description": "Manage LaunchDarkly feature flags — list, inspect, toggle, and update flags across projects and environments.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["feature flag", "launchdarkly", "LD", "toggle flag", "flag status"]
+    },
+    {
+      "name": "release-notes",
+      "description": "Release prep: changelog scan, risk assessment, dependency check, lint, test coverage, Slack-ready summary with rollback plan.",
+      "platform": "web",
+      "source": "elmo-application",
+      "triggerPatterns": ["release", "release notes", "what's shipping", "risk assessment"]
+    },
+    {
+      "name": "excalidraw-diagram",
+      "description": "Create Excalidraw diagram JSON files for visualizing workflows, architectures, or concepts.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["diagram", "excalidraw", "visualize", "architecture diagram"]
+    },
+    {
+      "name": "flowmo",
+      "description": "Flowmo SDLC orchestrator entry point. Routes to requirements, delivery, project, initiative, verify, or catalogue sub-skills.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["flowmo", "SDLC", "requirements", "delivery", "epic", "feature"]
+    },
+    {
+      "name": "flowmo-requirements",
+      "description": "PO-facing requirements authoring: Features + Slices with Figma links and given/when/then ACs. Publishes to Jira.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["requirements", "features", "acceptance criteria", "Jira publish"]
+    },
+    {
+      "name": "flowmo-delivery",
+      "description": "Developer-facing implementation orchestrator: pick up a Jira ticket and orchestrate across BE/FE/EDS repos.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["implement ticket", "delivery", "orchestrate repos", "pick up ticket"]
+    },
+    {
+      "name": "flowmo-verify",
+      "description": "Verify ticket claims against legacy/new code and Figma, or staging-audit the live deployed feature.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["verify", "staging audit", "claims", "acceptance check"]
+    },
+    {
+      "name": "flowmo-project",
+      "description": "Project-level oversight: init, update, assess health, audit requirements coverage across themes.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["project status", "backlog health", "SDLC assessment", "requirements audit"]
+    },
+    {
+      "name": "flowmo-initiative",
+      "description": "PM-facing Phase 0 Discovery: customer data synthesis (Gong, Zendesk, Pendo), Opportunity Canvas, BRICE scoring.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["discovery", "opportunity canvas", "BRICE", "customer feedback"]
+    },
+    {
+      "name": "flowmo-catalogue",
+      "description": "Requirements bootstrap: capture an existing module's complete functional behaviour as a requirements catalogue.",
+      "platform": "any",
+      "source": "flowmo",
+      "triggerPatterns": ["catalogue", "bootstrap", "capture existing system", "product skill"]
+    },
+    {
+      "name": "rg-mobile",
+      "description": "Rotageek React Native repo operating guide: runtime, navigation, auth, GraphQL/codegen, native builds, testing.",
+      "platform": "mobile",
+      "source": "marketplace",
+      "triggerPatterns": ["rotageek", "rg mobile", "rg-mobile-app", "GraphQL codegen"]
+    },
+    {
+      "name": "mobile-tooling",
+      "description": "Collection of tooling skills for React Native mobile work. Packaged for consuming repos.",
+      "platform": "mobile",
+      "source": "marketplace",
+      "triggerPatterns": ["mobile tooling", "react native", "mobile dev", "expo"]
+    },
+    {
+      "name": "react-native-module-federation",
+      "description": "Architect, implement, migrate, and debug React Native microfrontends using Re.Pack, Module Federation 2.0, and Metro plugin.",
+      "platform": "mobile",
+      "source": "marketplace",
+      "triggerPatterns": ["module federation mobile", "Re.Pack", "micro frontend mobile", "ScriptManager"]
+    },
+    {
+      "name": "flowmo-mobile",
+      "description": "Install-by-module umbrella for the ELMO HR mobile team. Ships flowmo spine plus mobile code guide.",
+      "platform": "mobile",
+      "source": "marketplace",
+      "triggerPatterns": ["mobile flowmo", "mobile team", "mobile module"]
+    },
+    {
+      "name": "cobra",
+      "description": "Cobra codebase orientation — BFF proxy, upstream resolver, cobra app, cobra proxy.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["cobra", "BFF", "upstream proxy", "upstream resolver"]
+    },
+    {
+      "name": "identity",
+      "description": "Kong OIDC, Kong gateway, oidc-multitenant plugin, auth and identity infrastructure.",
+      "platform": "infra",
+      "source": "marketplace",
+      "triggerPatterns": ["kong", "OIDC", "gateway", "identity", "auth"]
+    },
+    {
+      "name": "design-spec",
+      "description": "Specification-driven design skills. Covers design handoff: annotating designs, mapping interaction flows, pre-dev checklist.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["design spec", "handoff", "interaction flow", "annotation"]
+    },
+    {
+      "name": "design-system",
+      "description": "EDS maintenance skills — token sync, component specs, Figma Code Connect, coverage audits.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["design system maintenance", "token sync", "code connect", "coverage audit"]
+    },
+    {
+      "name": "eff",
+      "description": "Elmo Frontend Design — the Elmo flavour of frontend design patterns.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["eff", "frontend design", "elmo frontend"]
+    },
+    {
+      "name": "elmo-eds",
+      "description": "ELMO Design System (@eds/react) — three coupled skills inside a single plugin.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["eds react", "design system", "eds plugin"]
+    },
+    {
+      "name": "ld-audit",
+      "description": "LaunchDarkly flag retirement audit for a code repo. Given a team, finds stale/unused flags.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["flag audit", "stale flags", "flag retirement", "LD audit"]
+    },
+    {
+      "name": "learning-dev",
+      "description": "Skills for the ELMO Learning team — biases changes toward small, safe, tested increments.",
+      "platform": "web",
+      "source": "marketplace",
+      "triggerPatterns": ["learning", "learning module", "LMS2"]
+    },
+    {
+      "name": "platform-mcps",
+      "description": "Token-budget controls, playbooks, and operating rules for all ELMO MCP servers routed via agentgateway.",
+      "platform": "infra",
+      "source": "marketplace",
+      "triggerPatterns": ["MCP", "agentgateway", "SonarQube", "Jenkins", "Kubernetes", "Elasticsearch"]
+    },
+    {
+      "name": "skill-review",
+      "description": "Adversarial review for repos whose product is instructions — skills, agent contracts, reference docs.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["skill review", "adversarial review", "review skill", "agent contract"]
+    },
+    {
+      "name": "ui-design",
+      "description": "UI design skills for ELMO product teams with Figma MCP direct write access. Covers web and mobile platforms.",
+      "platform": "both",
+      "source": "marketplace",
+      "triggerPatterns": ["UI design", "figma write", "design skills", "product design"]
+    },
+    {
+      "name": "keep-alive",
+      "description": "Prevents host sleep/lock during long-running processes. Surfaces 'waiting for permission' status in a local browser dashboard.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["keep alive", "long running", "prevent sleep", "model training"]
+    },
+    {
+      "name": "sense-check",
+      "description": "Sanity-check, double-check, or verify the previous answer before relying on it.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["sense check", "sanity check", "double check", "verify answer"]
+    },
+    {
+      "name": "feature-qa-autopilot",
+      "description": "Autonomous end-to-end QA for an in-flight feature/epic across backend and frontend. Drives Playwright, fixes bugs, records Jira evidence.",
+      "platform": "both",
+      "source": "marketplace",
+      "triggerPatterns": ["QA", "autopilot", "end-to-end test", "feature validation"]
+    },
+    {
+      "name": "implement-ticket",
+      "description": "Take a Jira ticket from spec to PR. Fetches ticket, plans, creates branch, implements, tests, opens PR, transitions Jira.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["implement ticket", "spec to PR", "pick up ticket"]
+    },
+    {
+      "name": "elmo-nodejs-kafka-sink",
+      "description": "Skills for @elmo/kafka-sink-core — consumer scaffolding, transformers, tenant resolution, SDK events, batch tuning, releases.",
+      "platform": "infra",
+      "source": "marketplace",
+      "triggerPatterns": ["kafka", "sink", "consumer", "CDC", "transformer"]
+    },
+    {
+      "name": "flowmo-recruitment",
+      "description": "Install-by-module umbrella for the Recruitment team. Flowmo SDLC + recruitment-specific overrides.",
+      "platform": "any",
+      "source": "marketplace",
+      "triggerPatterns": ["recruitment", "recruitment module", "hiring"]
+    },
+    {
+      "name": "speckit-specify",
+      "description": "Create or update feature specification from natural language description.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["specify", "feature spec", "spec from description"]
+    },
+    {
+      "name": "speckit-plan",
+      "description": "Execute implementation planning workflow using plan template to generate design artifacts.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["plan", "implementation plan", "design artifacts"]
+    },
+    {
+      "name": "speckit-implement",
+      "description": "Execute implementation plan by processing all tasks defined in tasks.md.",
+      "platform": "any",
+      "source": "elmo-application",
+      "triggerPatterns": ["implement", "execute plan", "run tasks"]
+    }
+  ]
+}

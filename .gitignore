@@ -18,6 +18,10 @@ radar/
 # Old ai-kernel memory (superseded by CLAUDE.md auto-memory)
 memories/
 
+# Node
+node_modules/
+dist/
+
 # Observatory (command-centre) secrets
 observatory/.env.local
 observatory/state/

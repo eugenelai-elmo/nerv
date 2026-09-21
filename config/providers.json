@@ -1,0 +1,10 @@
+{
+  "scorer": {
+    "provider": "jev-cloudflare",
+    "config": {}
+  },
+  "router": {
+    "provider": "jev-router",
+    "config": {}
+  }
+}

@@ -11,6 +11,6 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["lib/**/*.ts", "providers/**/*.ts", "spikes/**/*.ts"],
+  "include": ["lib/**/*.ts", "providers/**/*.ts", "spikes/**/*.ts", "checks/**/*.ts", "hooks/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

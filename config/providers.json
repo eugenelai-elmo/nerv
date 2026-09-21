@@ -6,5 +6,17 @@
   "router": {
     "provider": "jev-router",
     "config": {}
+  },
+  "memory": {
+    "provider": "filesystem-fallback",
+    "config": {}
+  },
+  "device": {
+    "provider": "device-fallback",
+    "config": {}
+  },
+  "session": {
+    "provider": "herdr",
+    "config": {}
   }
 }

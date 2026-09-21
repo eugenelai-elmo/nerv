@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "score": "npx tsx spikes/jev-sprint-scorer.ts"
+    "score": "npx tsx spikes/jev-sprint-scorer.ts",
+    "check": "npx tsx checks/check-stack.ts",
+    "check:verbose": "npx tsx checks/check-stack.ts --verbose"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

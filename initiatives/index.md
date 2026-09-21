@@ -8,3 +8,4 @@ Cross-repo initiative state. Read `summary.md` first, then supporting files as n
 | `payslips-mobile` | Working on Payslips in ELMO Mobile — MicroPay + KeyPay proxy APIs, contractors, store submission | Active — contract freeze 28 Aug |
 | `mobile-mf` | Working on Rotageek mobile app consolidation — MF architecture, auth, Zephyr, flasum coordination | Active — CTO doc next |
 | `github-merge-queue` | Enabling GitHub merge queue on elmo-frontend master — Jenkins status context bridge, phased rollout | Active — Phase 0 (auto-merge) ready, Phase 1 (Jenkins discovery test) next |
+| `nerv-v2` | Agentic substrate upgrade — Jev routing, Herdr persistence, OpenViking memory, ARTEMIS mobile, skill routing | Discovery — Phase 0 validation |

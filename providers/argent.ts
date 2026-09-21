@@ -34,6 +34,14 @@ async function argentCli(args: string[], cwd?: string): Promise<string> {
   return stdout.trim()
 }
 
+const SAFE_UDID = /^[0-9A-Fa-f-]+$|^booted$/
+
+function validateSimId(id: string | undefined): void {
+  if (id !== undefined && id !== 'booted' && !SAFE_UDID.test(id)) {
+    throw new Error(`Invalid simulator UDID: ${id}`)
+  }
+}
+
 async function xcrun(args: string[]): Promise<string> {
   const { stdout } = await exec('xcrun', args, { timeout: 15_000 })
   return stdout.trim()
@@ -102,9 +110,9 @@ const provider: DeviceProvider = {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const localPath = join(tmpdir(), `nerv-screenshot-${timestamp}.png`)
 
-    if (!deviceId || deviceId.includes('-')) {
-      // UUID format = iOS simulator
+    if (!deviceId || SAFE_UDID.test(deviceId)) {
       const udid = deviceId ?? 'booted'
+      validateSimId(udid)
       await xcrun(['simctl', 'io', udid, 'screenshot', localPath])
     } else {
       // Android device

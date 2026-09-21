@@ -1,18 +1,8 @@
 import type { SkillEntry, SkillMatch } from '../lib/types.js'
 
-const MAX_SKILLS_PER_CALL = 15
-
-function chunkInventory(inventory: SkillEntry[]): SkillEntry[][] {
-  const chunks: SkillEntry[][] = []
-  for (let i = 0; i < inventory.length; i += MAX_SKILLS_PER_CALL) {
-    chunks.push(inventory.slice(i, i + MAX_SKILLS_PER_CALL))
-  }
-  return chunks
-}
-
-function buildQuestions(chunk: SkillEntry[]): Record<string, { type: 'noul'; instructions: string }> {
+function buildQuestions(skills: SkillEntry[]): Record<string, { type: 'noul'; instructions: string }> {
   const questions: Record<string, { type: 'noul'; instructions: string }> = {}
-  for (const skill of chunk) {
+  for (const skill of skills) {
     questions[skill.name] = {
       type: 'noul',
       instructions: `Is the "${skill.name}" skill relevant to this task? ${skill.description}`,
@@ -21,8 +11,8 @@ function buildQuestions(chunk: SkillEntry[]): Record<string, { type: 'noul'; ins
   return questions
 }
 
-function buildState(prompt: string, chunk: SkillEntry[]): string {
-  const skillSummary = chunk.map(s => `- ${s.name} (${s.platform}): ${s.description}`).join('\n')
+function buildState(prompt: string, skills: SkillEntry[]): string {
+  const skillSummary = skills.map(s => `- ${s.name} (${s.platform}): ${s.description}`).join('\n')
   return `USER PROMPT:\n${prompt}\n\nAVAILABLE SKILLS:\n${skillSummary}`
 }
 
@@ -60,32 +50,23 @@ const provider = {
   async route(prompt: string, inventory: SkillEntry[]): Promise<SkillMatch[]> {
     if (prompt.length < 20) return []
 
-    const chunks = chunkInventory(inventory)
-    const allMatches: SkillMatch[] = []
+    const answers = await callJev(buildState(prompt, inventory), buildQuestions(inventory))
+    const matches: SkillMatch[] = []
 
-    const results = await Promise.all(
-      chunks.map(chunk =>
-        callJev(buildState(prompt, chunk), buildQuestions(chunk))
-          .then(answers => ({ chunk, answers }))
-      )
-    )
-
-    for (const { chunk, answers } of results) {
-      for (const skill of chunk) {
-        const answer = answers[skill.name]
-        if (!answer) continue
-        const prob = answer.noul ?? 0
-        if (prob > 0.6) {
-          allMatches.push({
-            name: skill.name,
-            confidence: prob,
-            reason: `jev noul: ${(prob * 100).toFixed(0)}%`,
-          })
-        }
+    for (const skill of inventory) {
+      const answer = answers[skill.name]
+      if (!answer) continue
+      const prob = answer.noul ?? 0
+      if (prob > 0.6) {
+        matches.push({
+          name: skill.name,
+          confidence: prob,
+          reason: `jev noul: ${(prob * 100).toFixed(0)}%`,
+        })
       }
     }
 
-    return allMatches
+    return matches
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 8)
   },

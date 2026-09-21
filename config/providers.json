@@ -1,6 +1,6 @@
 {
   "scorer": {
-    "provider": "jev-cloudflare",
+    "provider": "jev-typesafe",
     "config": {}
   },
   "router": {

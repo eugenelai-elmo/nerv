@@ -1,9 +1,10 @@
 import { readFile, writeFile, readdir, mkdir, stat, realpath } from 'node:fs/promises'
 import { join, dirname, resolve, sep } from 'node:path'
-import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import type { MemoryProvider, MemoryTier, MemoryEntry } from '../lib/types.js'
 
-const NERV_ROOT = join(homedir(), 'projects', 'nerv')
+// Derive from this file's location rather than homedir() to avoid macOS case mismatch
+const NERV_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const NERV_ROOT_PREFIX = NERV_ROOT + sep
 
 function isInsideNervRoot(resolved: string): boolean {

@@ -9,6 +9,11 @@
                         "type": "command",
                         "command": "bash $HOME/projects/nerv/hooks/audience-gate.sh",
                         "description": "NERV v2 Jev audience detection — reinforces tone-of-voice for outward-facing text"
+                    },
+                    {
+                        "type": "command",
+                        "command": "bash $HOME/projects/nerv/hooks/memory-recall.sh",
+                        "description": "NERV v2 Layer 4 — injects relevant knowledge from memory filesystem into session context"
                     }
                 ]
             }
@@ -26,6 +31,18 @@
                         "type": "command",
                         "command": "bash $HOME/projects/nerv/hooks/risk-gate.sh",
                         "description": "NERV v2 Jev risk-gate — warns on destructive/irreversible operations before execution"
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash $HOME/projects/nerv/hooks/memory-persist.sh",
+                        "description": "NERV v2 Layer 4 — saves research findings from session handoff to memory filesystem"
                     }
                 ]
             }

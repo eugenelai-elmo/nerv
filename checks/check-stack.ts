@@ -103,8 +103,10 @@ await check(0, 'TypeScript compiles', async () => {
     await exec('npx', ['tsc', '--noEmit'], { cwd: ROOT, timeout: 30_000 })
     return { status: 'pass', message: 'No type errors' }
   } catch (err) {
-    const msg = (err as { stderr?: string }).stderr ?? (err as Error).message
+    const e = err as { stdout?: string; stderr?: string; message?: string }
+    const msg = [e.stdout, e.stderr, e.message].filter(Boolean).join('\n')
     const errorLines = msg.split('\n').filter(l => l.includes('error TS'))
+    if (errorLines.length === 0) return { status: 'warn', message: 'tsc exited non-zero but no TS errors found — check output manually' }
     return { status: 'fail', message: `${errorLines.length} type error(s)${VERBOSE ? ':\n' + errorLines.join('\n') : ''}` }
   }
 })
@@ -366,6 +368,200 @@ await check(6, 'decide() contract loads', async () => {
   return { status: 'pass', message: 'decide() exported' }
 })
 
+// ── Integration: Wiring ───────────────────────────────────────
+
+const SETTINGS_PATHS = [
+  join(ROOT, '.claude', 'settings.json'),
+  join(ROOT, '.claude', 'settings.local.json'),
+  join(homedir(), '.claude', 'settings.json'),
+]
+
+async function loadAllHookCommands(): Promise<string[]> {
+  const commands: string[] = []
+  for (const p of SETTINGS_PATHS) {
+    try {
+      const raw = await readFile(p, 'utf-8')
+      const settings = JSON.parse(raw)
+      const hooks = settings.hooks ?? {}
+      for (const event of Object.values(hooks) as Array<unknown>) {
+        if (!Array.isArray(event)) continue
+        for (const entry of event) {
+          const e = entry as { hooks?: Array<{ command?: string }> }
+          for (const h of e.hooks ?? []) {
+            if (h.command) commands.push(h.command)
+          }
+        }
+      }
+    } catch { continue }
+  }
+  return commands
+}
+
+await check(7, 'Hook scripts audited (wired vs orphaned)', async () => {
+  const hookFiles = (await import('node:fs/promises')).readdir
+  const entries = await hookFiles(join(ROOT, 'hooks'))
+  const shellScripts = entries.filter((f: string) => f.endsWith('.sh'))
+  const helperScripts = entries.filter((f: string) => f.endsWith('.ts'))
+
+  const commands = await loadAllHookCommands()
+  const commandsStr = commands.join(' ')
+
+  // Check which shell hooks (entry points) are wired in settings.json
+  const wired: string[] = []
+  const orphaned: string[] = []
+  for (const script of shellScripts) {
+    const name = script.replace(/\.sh$/, '')
+    if (commandsStr.includes(script) || commandsStr.includes(name)) {
+      wired.push(script)
+    } else {
+      orphaned.push(script)
+    }
+  }
+
+  // Check which .ts helpers are called by any shell hook
+  const allShellContent = await Promise.all(
+    shellScripts.map(f => readFile(join(ROOT, 'hooks', f), 'utf-8'))
+  )
+  const shellContentStr = allShellContent.join(' ')
+  const unreferencedHelpers = helperScripts.filter(f => !shellContentStr.includes(f))
+
+  const problems: string[] = []
+  if (orphaned.length > 0) problems.push(`Orphaned hooks: ${orphaned.join(', ')}`)
+  if (unreferencedHelpers.length > 0) problems.push(`Unreferenced helpers: ${unreferencedHelpers.join(', ')}`)
+
+  if (problems.length > 0) {
+    return { status: 'warn', message: `Wired: ${wired.join(', ')}. ${problems.join('. ')}` }
+  }
+  return { status: 'pass', message: `${wired.length} hooks wired, ${helperScripts.length} helpers referenced` }
+})
+
+await check(7, 'Settings hooks point to existing scripts', async () => {
+  const commands = await loadAllHookCommands()
+  const missing: string[] = []
+  for (const cmd of commands) {
+    const expanded = cmd
+      .replace(/\$HOME/g, homedir())
+      .replace(/\$\{HOME\}/g, homedir())
+      .replace(/\$\{CLAUDE_PROJECT_DIR\}/g, ROOT)
+    const parts = expanded.split(/\s+/)
+    const scriptPath = parts.find(p => p.endsWith('.sh') || p.endsWith('.ts') || p.endsWith('.mjs'))
+    if (!scriptPath) continue
+    const resolved = scriptPath.startsWith('/') ? scriptPath : join(ROOT, scriptPath)
+    if (!await fileExists(resolved)) {
+      missing.push(scriptPath)
+    }
+  }
+  if (missing.length > 0) return { status: 'fail', message: `Scripts not found: ${missing.join(', ')}` }
+  return { status: 'pass', message: `All ${commands.length} hook commands resolve to existing scripts` }
+})
+
+await check(7, 'Layer 4 (Memory) has callers in hooks', async () => {
+  const hookDir = join(ROOT, 'hooks')
+  const hookEntries = await (await import('node:fs/promises')).readdir(hookDir)
+  const callers: string[] = []
+  for (const f of hookEntries) {
+    if (!f.endsWith('.sh') && !f.endsWith('.ts')) continue
+    const content = await readFile(join(hookDir, f), 'utf-8')
+    if (content.includes('memory') || content.includes('recall') || content.includes('save(')) {
+      callers.push(f)
+    }
+  }
+  if (callers.length === 0) {
+    return { status: 'fail', message: 'No hook calls recall(), save(), or imports memory — Layer 4 is structurally valid but functionally dead' }
+  }
+  return { status: 'pass', message: `Memory called from: ${callers.join(', ')}` }
+})
+
+await check(7, 'Decision hooks resolve to definitions', async () => {
+  const hookDir = join(ROOT, 'hooks')
+  const hookEntries = await (await import('node:fs/promises')).readdir(hookDir)
+  const referencedDecisions: string[] = []
+  for (const f of hookEntries) {
+    if (!f.endsWith('.sh')) continue
+    const content = await readFile(join(hookDir, f), 'utf-8')
+    const match = content.match(/decide\.ts\s+(\S+)/)
+    if (match) referencedDecisions.push(match[1])
+  }
+  if (referencedDecisions.length === 0) {
+    return { status: 'skip', message: 'No hooks reference decide.ts' }
+  }
+  const missing: string[] = []
+  for (const name of referencedDecisions) {
+    if (!await fileExists(join(ROOT, 'decisions', `${name}.json`))) {
+      missing.push(name)
+    }
+  }
+  if (missing.length > 0) return { status: 'fail', message: `Hooks reference missing decisions: ${missing.join(', ')}` }
+  return { status: 'pass', message: `All referenced decisions exist: ${referencedDecisions.join(', ')}` }
+})
+
+await check(7, 'Wired hooks invoke their layers', async () => {
+  // Trace the full call chain: settings.json → shell hook → helper scripts → lib/
+  const commands = await loadAllHookCommands()
+  const nervCommands = commands.filter(c => c.includes('nerv'))
+
+  // Read all wired shell hooks and their .ts helpers to find lib/ imports
+  const hookDir = join(ROOT, 'hooks')
+  const allHookFiles = await (await import('node:fs/promises')).readdir(hookDir)
+  const allContent: string[] = []
+  for (const f of allHookFiles) {
+    if (!f.endsWith('.sh') && !f.endsWith('.ts')) continue
+    allContent.push(await readFile(join(hookDir, f), 'utf-8'))
+  }
+  const contentStr = allContent.join('\n') + '\n' + nervCommands.join('\n')
+
+  const layersCalled = new Set<string>()
+
+  // L1:Scorer — called transitively via decide.ts → decide() → score()
+  if (contentStr.includes('decide') || contentStr.includes('scorer') || contentStr.includes('score(')) {
+    layersCalled.add('L1:Scorer')
+  }
+  // L2:Router — keyword-router is kept for programmatic use; superpowers routes in-context
+  if (contentStr.includes('route-prompt') || contentStr.includes('skill-router') || contentStr.includes('router')) {
+    layersCalled.add('L2:Router')
+  }
+  // L3:Session — Herdr is the session container, not called from hooks
+  // Mark as wired if we're running inside Herdr (checked separately)
+  // L4:Memory
+  if (contentStr.includes('memory') || contentStr.includes('recall(') || contentStr.includes("'../lib/memory")) {
+    layersCalled.add('L4:Memory')
+  }
+  // L5:Mobile — on-demand, not expected in every hook chain
+  if (contentStr.includes('device') || contentStr.includes('argent') || contentStr.includes('mobile')) {
+    layersCalled.add('L5:Mobile')
+  }
+  // L6:Decisions — called via hooks/decide.ts
+  if (contentStr.includes('decide')) {
+    layersCalled.add('L6:Decisions')
+  }
+
+  // L3 and L5 are on-demand layers — warn only on L4 (should be in the data path)
+  const criticalLayers = ['L1:Scorer', 'L4:Memory', 'L6:Decisions']
+  const onDemandLayers = ['L2:Router', 'L3:Session', 'L5:Mobile']
+  const missingCritical = criticalLayers.filter(l => !layersCalled.has(l))
+  const missingOnDemand = onDemandLayers.filter(l => !layersCalled.has(l))
+
+  if (missingCritical.length > 0) {
+    return { status: 'fail', message: `Critical layers unwired: ${missingCritical.join(', ')}. On-demand (OK): ${missingOnDemand.join(', ')}` }
+  }
+  if (missingOnDemand.length > 0) {
+    return { status: 'pass', message: `Critical layers wired: ${[...layersCalled].filter(l => criticalLayers.includes(l)).join(', ')}. On-demand: ${missingOnDemand.join(', ')}` }
+  }
+  return { status: 'pass', message: `All layers reachable from hooks: ${[...layersCalled].join(', ')}` }
+})
+
+await check(7, 'Session runs inside Herdr', async () => {
+  try {
+    const { stdout } = await exec('herdr', ['workspace', 'list'], { timeout: 5_000 })
+    const data = JSON.parse(stdout) as { result: { workspaces: Array<{ focused: boolean; label: string }> } }
+    const focused = data.result.workspaces.find(w => w.focused)
+    if (focused) return { status: 'pass', message: `Inside Herdr workspace: ${focused.label}` }
+    return { status: 'warn', message: 'Herdr running but no workspace focused — session may not be protected' }
+  } catch {
+    return { status: 'warn', message: 'Cannot determine if session is inside Herdr' }
+  }
+})
+
 // ── Report ─────────────────────────────────────────────────────────
 
 console.log('')
@@ -376,7 +572,7 @@ let currentLayer = -1
 for (const r of results) {
   if (r.layer !== currentLayer) {
     currentLayer = r.layer
-    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Mobile (Argent+ARTEMIS)', 'Decisions']
+    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Mobile (Argent+ARTEMIS)', 'Decisions', 'Wiring (Integration)']
     console.log(`\n\x1b[1mLayer ${r.layer}: ${layerNames[r.layer]}\x1b[0m`)
   }
   const latency = r.latencyMs > 0 ? ` \x1b[90m${r.latencyMs}ms\x1b[0m` : ''
@@ -408,7 +604,7 @@ for (const r of results) {
   else if (!layerStatus.has(r.layer)) layerStatus.set(r.layer, r.status)
 }
 
-const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Mobile', 'L6 Decisions']
+const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Mobile', 'L6 Decisions', 'Wiring']
 console.log('')
 for (const [layer, status] of layerStatus) {
   console.log(`  ${icon(status)} ${layerNames[layer]}`)

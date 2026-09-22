@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.nerv.laya</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/eugene.lai/projects/nerv/services/.venv/bin/python</string>
+        <string>services/laya-server.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/eugene.lai/projects/nerv</string>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/Users/eugene.lai/.cache/nerv/laya.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/eugene.lai/.cache/nerv/laya.log</string>
+</dict>
+</plist>

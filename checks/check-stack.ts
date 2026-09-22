@@ -173,6 +173,28 @@ await check(1, 'Scorer contract loads', async () => {
   return { status: 'pass', message: 'score() exported' }
 })
 
+await check(1, 'Laya local server', async () => {
+  const url = process.env.LAYA_URL ?? 'http://127.0.0.1:8421'
+  try {
+    const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3_000) })
+    if (res.ok) {
+      const data = await res.json() as { model_loaded: boolean }
+      return { status: 'pass', message: `Laya at ${url}, model_loaded=${data.model_loaded}` }
+    }
+    return { status: 'warn', message: `Laya ${res.status} at ${url}` }
+  } catch {
+    return { status: 'skip', message: `Laya not running at ${url} (optional — Jev fallback active)` }
+  }
+})
+
+await check(1, 'Scorer fallback chain configured', async () => {
+  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
+  const config = JSON.parse(raw)
+  const primary = config.scorer?.provider
+  const fallback = config.scorer?.fallback ?? 'jev-fallback'
+  return { status: 'pass', message: `${primary} → ${fallback} → jev-fallback` }
+})
+
 // ── Layer 2: Router ────────────────────────────────────────────────
 
 await check(2, 'Router contract loads', async () => {
@@ -192,13 +214,12 @@ await check(2, 'Keyword fallback routes correctly', async () => {
   return { status: 'pass', message: `${matches.length} match(es): ${matches.map((m: { name: string }) => m.name).join(', ')}` }
 })
 
-await check(2, 'Hook script exists and is executable', async () => {
-  const hookPath = join(ROOT, 'hooks', 'skill-router.sh')
-  if (!await fileExists(hookPath)) return { status: 'fail', message: 'hooks/skill-router.sh not found' }
-  const info = await stat(hookPath)
-  const isExec = (info.mode & 0o111) !== 0
-  if (!isExec) return { status: 'warn', message: 'Hook exists but is not executable' }
-  return { status: 'pass', message: 'Hook present and executable' }
+await check(2, 'Skill routing delegated to superpowers', async () => {
+  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
+  const config = JSON.parse(raw)
+  const provider = config.router?.provider
+  if (provider === 'jev-router') return { status: 'warn', message: 'Still using jev-router — superpowers handles skill routing in-context now' }
+  return { status: 'pass', message: `Router provider: ${provider} (hook-based Jev routing retired)` }
 })
 
 // ── Layer 3: Session (Herdr) ───────────────────────────────────────

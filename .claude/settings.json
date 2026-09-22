@@ -7,8 +7,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash $HOME/projects/nerv/hooks/skill-router.sh",
-                        "description": "NERV v2 Jev skill router — suggests relevant skills for the prompt"
+                        "command": "bash $HOME/projects/nerv/hooks/audience-gate.sh",
+                        "description": "NERV v2 Jev audience detection — reinforces tone-of-voice for outward-facing text"
                     }
                 ]
             }
@@ -21,6 +21,11 @@
                         "type": "command",
                         "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/require-eff-review.sh",
                         "description": "MANDATORY FE Phase 7.5 gate: block git push of a FLOW-/HOR- feature branch until a committed, fresh specs/<TICKET>/eff-review-findings.json exists"
+                    },
+                    {
+                        "type": "command",
+                        "command": "bash $HOME/projects/nerv/hooks/risk-gate.sh",
+                        "description": "NERV v2 Jev risk-gate — warns on destructive/irreversible operations before execution"
                     }
                 ]
             }

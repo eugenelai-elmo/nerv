@@ -169,7 +169,8 @@ export interface DecisionResult {
 
 export interface ProviderConfig {
   scorer: {
-    provider: 'jev-typesafe' | 'jev-cloudflare' | 'jev-openrouter' | 'jev-fallback'
+    provider: 'laya-local' | 'jev-typesafe' | 'jev-cloudflare' | 'jev-openrouter' | 'jev-fallback'
+    fallback?: string
     config: Record<string, string>
   }
   router: {

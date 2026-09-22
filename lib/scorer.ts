@@ -18,6 +18,7 @@ async function loadProvider(name: string): Promise<ScorerProvider> {
 export async function score(state: string, dimensions: Dimension[]): Promise<ScorerResult> {
   const config = await loadConfig()
   const providerName = config.scorer.provider
+  const fallbackName = config.scorer.fallback ?? 'jev-fallback'
   const start = performance.now()
 
   try {
@@ -29,15 +30,27 @@ export async function score(state: string, dimensions: Dimension[]): Promise<Sco
       latencyMs: Math.round(performance.now() - start),
     }
   } catch (err) {
-    if (providerName === 'jev-fallback') throw err
+    console.error(`[scorer] ${providerName} failed: ${(err as Error).message}, trying ${fallbackName}`)
 
-    console.error(`[scorer] ${providerName} failed: ${(err as Error).message}, falling back`)
-    const fallback = await loadProvider('jev-fallback')
-    const scores = await fallback.score(state, dimensions)
-    return {
-      scores,
-      provider: fallback.name,
-      latencyMs: Math.round(performance.now() - start),
+    try {
+      const fallback = await loadProvider(fallbackName)
+      const scores = await fallback.score(state, dimensions)
+      return {
+        scores,
+        provider: fallback.name,
+        latencyMs: Math.round(performance.now() - start),
+      }
+    } catch (err2) {
+      if (fallbackName === 'jev-fallback') throw err2
+
+      console.error(`[scorer] ${fallbackName} also failed: ${(err2 as Error).message}, using jev-fallback`)
+      const lastResort = await loadProvider('jev-fallback')
+      const scores = await lastResort.score(state, dimensions)
+      return {
+        scores,
+        provider: lastResort.name,
+        latencyMs: Math.round(performance.now() - start),
+      }
     }
   }
 }

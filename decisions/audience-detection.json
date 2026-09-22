@@ -1,6 +1,6 @@
 {
   "name": "audience-detection",
-  "description": "Detect who the response is for and adjust tone/depth accordingly. Technical peer gets terse code-focused answers. Stakeholder gets context and impact framing.",
+  "description": "Detect who the response is for and whether it needs skill reinforcement (tone-of-voice, etc). Silent on solo/technical work, speaks up for outward-facing text.",
   "dimensions": [
     {
       "name": "audience",
@@ -15,6 +15,13 @@
           "stakeholder": "Executive or cross-functional stakeholder — focus on outcomes, timeline, risk",
           "external": "External documentation, PR description, or public-facing text"
         }
+      }
+    },
+    {
+      "name": "is_outward_facing",
+      "question": {
+        "type": "noul",
+        "instructions": "Will the output be read by someone other than Eugene? Consider: Slack messages, PR descriptions, Jira tickets, emails, meeting notes, documentation, presentations, status updates. Code changes and local debugging are NOT outward-facing."
       }
     },
     {

@@ -1,11 +1,14 @@
 {
   "scorer": {
-    "provider": "jev-typesafe",
-    "config": {}
+    "provider": "laya-local",
+    "fallback": "jev-typesafe",
+    "config": {},
+    "note": "Laya (local, free) → Jev TypeSafe (network, paid) → jev-fallback (unknowns). Swap provider back to jev-typesafe if Laya not running."
   },
   "router": {
-    "provider": "jev-router",
-    "config": {}
+    "provider": "keyword-router",
+    "config": {},
+    "note": "Skill routing handled by superpowers (in-context). Keyword-router kept for programmatic use only."
   },
   "memory": {
     "provider": "filesystem-fallback",

@@ -1,4 +1,5 @@
 import { recall, list } from '../lib/memory.js'
+import { trace, now } from '../lib/trace.js'
 
 const prompt = process.argv[2]
 if (!prompt || prompt.length < 30) process.exit(0)
@@ -27,6 +28,17 @@ for (const p of paths) {
   }
   if (matched.length >= 3) break
 }
+
+const start = performance.now()
+await trace({
+  ts: now(),
+  hook: 'memory-recall',
+  layer: 'L4:Memory',
+  latencyMs: Math.round(performance.now() - start),
+  result: matched.length > 0 ? `${matched.length} entries: ${matched.map(m => m.path).join(', ')}` : 'no match',
+  prompt_len: prompt.length,
+  matched: matched.length > 0,
+})
 
 if (matched.length === 0) process.exit(0)
 

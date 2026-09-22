@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { save, list } from '../lib/memory.js'
+import { trace, now } from '../lib/trace.js'
 
 const HANDOFF_PATH = join(homedir(), '.claude', 'handoff', 'session-handoff.md')
 const DATE = new Date().toISOString().split('T')[0]
@@ -48,6 +49,14 @@ ${body}
   await save(path, content)
   savedCount++
 }
+
+await trace({
+  ts: now(),
+  hook: 'memory-persist',
+  layer: 'L4:Memory',
+  result: savedCount > 0 ? `saved ${savedCount} entries` : 'no new findings',
+  matched: savedCount > 0,
+})
 
 if (savedCount > 0) {
   console.log(`NERV Memory: saved ${savedCount} research entries to knowledge/research/`)

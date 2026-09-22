@@ -132,23 +132,20 @@ const provider: DeviceProvider = {
   async tap(x: number, y: number, deviceId?: string): Promise<DeviceResult> {
     const start = performance.now()
     if (!deviceId || deviceId.includes('-')) {
-      // iOS — use simctl
-      await xcrun(['simctl', 'io', deviceId ?? 'booted', 'tap', String(x), String(y)])
-    } else {
-      await exec('adb', ['-s', deviceId, 'shell', 'input', 'tap', String(x), String(y)], { timeout: 10_000 })
+      // simctl has no tap support — requires Argent MCP for iOS interaction
+      throw new Error('iOS tap requires Argent MCP (simctl io does not support tap). Run from a mobile repo with Argent configured.')
     }
+    await exec('adb', ['-s', deviceId, 'shell', 'input', 'tap', String(x), String(y)], { timeout: 10_000 })
     return timedResult(start)
   },
 
   async swipe(startX: number, startY: number, endX: number, endY: number, deviceId?: string): Promise<DeviceResult> {
     const start = performance.now()
     if (!deviceId || deviceId.includes('-')) {
-      await xcrun(['simctl', 'io', deviceId ?? 'booted', 'swipe',
-        String(startX), String(startY), String(endX), String(endY)])
-    } else {
-      await exec('adb', ['-s', deviceId, 'shell', 'input', 'swipe',
-        String(startX), String(startY), String(endX), String(endY), '300'], { timeout: 10_000 })
+      throw new Error('iOS swipe requires Argent MCP (simctl io does not support swipe). Run from a mobile repo with Argent configured.')
     }
+    await exec('adb', ['-s', deviceId, 'shell', 'input', 'swipe',
+      String(startX), String(startY), String(endX), String(endY), '300'], { timeout: 10_000 })
     return timedResult(start)
   },
 
@@ -158,11 +155,10 @@ const provider: DeviceProvider = {
     if (text.length > 500) throw new Error('Text too long (max 500 chars)')
 
     if (!deviceId || deviceId.includes('-')) {
-      await xcrun(['simctl', 'io', deviceId ?? 'booted', 'type', text])
-    } else {
-      const escaped = text.replace(/ /g, '%s')
-      await exec('adb', ['-s', deviceId, 'shell', 'input', 'text', escaped], { timeout: 10_000 })
+      throw new Error('iOS type requires Argent MCP (simctl io does not support text input). Run from a mobile repo with Argent configured.')
     }
+    const escaped = text.replace(/ /g, '%s')
+    await exec('adb', ['-s', deviceId, 'shell', 'input', 'text', escaped], { timeout: 10_000 })
     return timedResult(start)
   },
 

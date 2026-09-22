@@ -8,7 +8,7 @@
   "router": {
     "provider": "keyword-router",
     "config": {},
-    "note": "Skill routing handled by superpowers (in-context). Keyword-router kept for programmatic use only."
+    "note": "Skill routing handled by superpowers (in-context). Keyword-router kept as Layer 2 contract implementation; not called from hooks."
   },
   "memory": {
     "provider": "filesystem-fallback",

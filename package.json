@@ -13,7 +13,9 @@
     "mobile:stop": "npx tsx commands/mobile.ts stop",
     "trace": "npx tsx commands/trace.ts",
     "trace:stats": "npx tsx commands/trace.ts stats",
-    "trace:clear": "npx tsx commands/trace.ts clear"
+    "trace:clear": "npx tsx commands/trace.ts clear",
+    "loadout": "npx tsx commands/loadout.ts",
+    "loadout:search": "npx tsx commands/loadout.ts search"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

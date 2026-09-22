@@ -49,9 +49,15 @@ async function scanLocalSkills(): Promise<LocalSkill[]> {
 
 // ── Formatters ───────────────────────────────────────────
 
+function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/[\x00-\x1f\x7f]|\x1b\[[0-9;]*[a-zA-Z]/g, '')
+}
+
 function truncate(str: string, max: number): string {
-  if (str.length <= max) return str
-  return str.slice(0, max - 1) + '…'
+  const safe = stripAnsi(str)
+  if (safe.length <= max) return safe
+  return safe.slice(0, max - 1) + '…'
 }
 
 function printResults(results: SkillRecommendation[], localSkills: LocalSkill[]): void {
@@ -68,8 +74,8 @@ function printResults(results: SkillRecommendation[], localSkills: LocalSkill[])
     const score = r.matchScore > 0 ? String(r.matchScore).padStart(3) : '  -'
     const stars = r.stars ? (r.stars >= 1000 ? `${(r.stars / 1000).toFixed(1)}k` : String(r.stars)).padStart(5) : '    -'
     const desc = truncate(r.description, 45)
-    const installed = localNames.has(r.name.toLowerCase()) ? ' \x1b[32m(installed)\x1b[0m' : ''
-    const repo = r.repo ? `\x1b[90m${r.repo}\x1b[0m` : ''
+    const installed = localNames.has(stripAnsi(r.name).toLowerCase()) ? ' \x1b[32m(installed)\x1b[0m' : ''
+    const repo = r.repo ? `\x1b[90m${stripAnsi(r.repo)}\x1b[0m` : ''
 
     console.log(`${rank}. ${name}  ${score}  ${stars}  ${desc}${installed}`)
     if (repo) console.log(`    ${repo}`)
@@ -141,7 +147,7 @@ if (subcommand === 'search') {
   })
 
   if (error) {
-    console.error(`\x1b[31mError: ${error}\x1b[0m`)
+    console.error(`\x1b[31mError: ${stripAnsi(error)}\x1b[0m`)
     console.log(`\x1b[90m(${latencyMs}ms)\x1b[0m`)
     if (results.length > 0) {
       console.log('\nLocal matches:')

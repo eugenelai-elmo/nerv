@@ -1,6 +1,7 @@
 {
   "name": "task-delegation",
   "description": "Eugene's leadership decision tree: route incoming work to the right action (do it, delegate it, escalate it, or decline). Encodes the TL prioritisation framework.",
+  "provider": "jev-typesafe",
   "dimensions": [
     {
       "name": "action",

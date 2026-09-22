@@ -11,12 +11,15 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+LAYA_MODEL = os.environ.get("LAYA_MODEL", "convaiinnovations/laya-typed-decisions")
 
 # Laya import — deferred to startup so missing lib gives a clear error
 laya_engine = None
@@ -56,8 +59,8 @@ async def lifespan(app: FastAPI):
         import laya as laya_lib
         import warnings
         warnings.filterwarnings("ignore", category=RuntimeWarning, module="laya")
-        laya_engine = laya_lib.load()
-        print("[laya-server] Model preloaded and ready")
+        laya_engine = laya_lib.load(LAYA_MODEL)
+        print(f"[laya-server] Model {LAYA_MODEL} preloaded and ready")
     except ImportError:
         print("[laya-server] ERROR: laya not installed. Run: pip install laya")
         raise

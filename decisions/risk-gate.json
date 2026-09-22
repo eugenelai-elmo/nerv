@@ -1,6 +1,7 @@
 {
   "name": "risk-gate",
   "description": "Assess whether an operation is destructive or risky before executing. Gates dangerous actions with a probability score.",
+  "provider": "jev-typesafe",
   "dimensions": [
     {
       "name": "is_destructive",

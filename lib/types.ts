@@ -156,6 +156,7 @@ export interface DecisionDefinition {
   description: string
   dimensions: Dimension[]
   thresholds?: Record<string, number>
+  provider?: string
 }
 
 export interface DecisionResult {

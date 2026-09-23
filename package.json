@@ -2,7 +2,11 @@
   "name": "nerv",
   "private": true,
   "type": "module",
+  "bin": {
+    "nerv": "./bin/nerv"
+  },
   "scripts": {
+    "nerv": "./bin/nerv",
     "score": "npx tsx spikes/jev-sprint-scorer.ts",
     "check": "npx tsx checks/check-stack.ts",
     "check:verbose": "npx tsx checks/check-stack.ts --verbose",

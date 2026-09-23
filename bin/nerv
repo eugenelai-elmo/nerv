@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Resolve NERV root (works when symlinked)
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+NERV_ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+
+cd "$NERV_ROOT"
+
+usage() {
+  cat <<'EOF'
+nerv — NERV command seat
+
+Commands:
+  mobile [check|start|stop|dev]   Mobile dev environment & orchestrated development
+  loadout [search|sources|local]  Skill discovery
+  trace [show|tail|stats|clear]   Runtime trace viewer
+  check [--verbose]               Stack health check
+
+Run 'nerv <command>' with no subcommand for help.
+EOF
+}
+
+cmd="${1:-}"
+shift 2>/dev/null || true
+
+case "$cmd" in
+  mobile)   exec npx tsx commands/mobile.ts "$@" ;;
+  loadout)  exec npx tsx commands/loadout.ts "$@" ;;
+  trace)    exec npx tsx commands/trace.ts "$@" ;;
+  check)    exec npx tsx checks/check-stack.ts "$@" ;;
+  help|-h|--help)
+    usage
+    ;;
+  "")
+    usage
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    echo >&2
+    usage >&2
+    exit 1
+    ;;
+esac

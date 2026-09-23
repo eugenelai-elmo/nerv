@@ -8,6 +8,8 @@
  *   npx tsx commands/mobile.ts start ios    # start iOS Simulator specifically
  *   npx tsx commands/mobile.ts start android # start Android Emulator specifically
  *   npx tsx commands/mobile.ts stop         # tear down dev server + simulators
+ *   npx tsx commands/mobile.ts dev "task"   # infer mode via Laya and dispatch to orchestrator
+ *   npx tsx commands/mobile.ts dev plan "task"  # explicit mode (plan/sync/implement)
  */
 
 import { execFile } from 'node:child_process'
@@ -15,6 +17,7 @@ import { promisify } from 'node:util'
 import { stat, readFile, access } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { decide } from '../lib/decide.js'
 
 const exec = promisify(execFile)
 const MOBILE_REPO = join(homedir(), 'Projects', 'elmo-learning-mobile-app')
@@ -259,9 +262,79 @@ async function startDevServer() {
   console.log(`  \x1b[36mherdr pane send-keys w1:t1:p1 "cd ${repo} && npx expo start" Enter\x1b[0m`)
 }
 
+// ── Dev subcommand ────────────────────────────────────────────────
+
+const DEV_MODES = ['implement', 'plan', 'sync'] as const
+type DevMode = typeof DEV_MODES[number]
+
+interface DevArgs {
+  mode: DevMode
+  task: string
+  explicitMode: boolean
+}
+
+function parseDevArgs(argv: string[]): DevArgs {
+  // argv: everything after 'dev', e.g. ['plan', 'add dark mode toggle'] or ['add dark mode toggle']
+  const first = argv[0] ?? ''
+  if (DEV_MODES.includes(first as DevMode)) {
+    return {
+      mode: first as DevMode,
+      task: argv.slice(1).join(' '),
+      explicitMode: true,
+    }
+  }
+  return {
+    mode: 'implement',
+    task: argv.join(' '),
+    explicitMode: false,
+  }
+}
+
+async function handleDev(argv: string[]) {
+  const args = parseDevArgs(argv)
+
+  if (!args.task) {
+    console.log('\x1b[33mUsage: nerv mobile dev [plan|sync|implement] "task description"\x1b[0m')
+    process.exit(1)
+  }
+
+  let mode = args.mode
+  let modeLabel: string
+
+  if (args.explicitMode) {
+    modeLabel = '(explicit)'
+  } else {
+    try {
+      const result = await decide('dev-mode', args.task)
+      if (DEV_MODES.includes(result.decision as DevMode)) {
+        mode = result.decision as DevMode
+      }
+      modeLabel = `(inferred via ${result.provider}, ${result.latencyMs}ms)`
+    } catch {
+      modeLabel = '(default)'
+    }
+  }
+
+  console.log('')
+  console.log('\x1b[1mNERV Mobile — Dev\x1b[0m')
+  console.log('═'.repeat(50))
+  console.log(`  Task:  ${args.task}`)
+  console.log(`  Mode:  ${mode} ${modeLabel}`)
+  console.log('')
+
+  // Route to orchestrator (flowmo by default)
+  console.log(`\x1b[90mDispatching to flowmo → ${mode}...\x1b[0m`)
+}
+
 // ── Main ───────────────────────────────────────────────────────────
 
 async function main() {
+  // Route 'dev' subcommand before the environment check flow
+  if (MODE === 'dev') {
+    await handleDev(process.argv.slice(3))
+    return
+  }
+
   console.log('')
   console.log('\x1b[1mNERV Mobile — Developer Environment\x1b[0m')
   console.log('═'.repeat(50))

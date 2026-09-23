@@ -3,6 +3,7 @@ import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { resolve as oasResolve, type SkillRecommendation } from '../providers/openagentskill.js'
+import { search as skillsShSearch } from '../providers/skills-sh.js'
 import { trace, now } from '../lib/trace.js'
 
 const args = process.argv.slice(2)
@@ -88,8 +89,8 @@ function printSources(): void {
   console.log('')
   console.log('\x1b[1mConfigured Sources\x1b[0m\n')
   console.log('  \x1b[32m●\x1b[0m  OpenAgentSkill    Public REST, no auth, task→skill matching')
+  console.log('  \x1b[32m●\x1b[0m  skills.sh         CLI search via npx skills (282+ skills, install counts)')
   console.log('  \x1b[32m●\x1b[0m  Local scan        ~/.claude/skills/ + project skills')
-  console.log('  \x1b[90m○\x1b[0m  skills.sh         Needs Vercel OIDC auth (not wired)')
   console.log('  \x1b[90m○\x1b[0m  Laya guard        Security vetting (future)')
   console.log('  \x1b[90m○\x1b[0m  Laya relevance    Relevance scoring (future)')
   console.log('')
@@ -104,26 +105,37 @@ if (subcommand === 'search') {
     process.exit(1)
   }
 
-  console.log(`\x1b[90mSearching OpenAgentSkill for: "${query}"...\x1b[0m`)
+  console.log(`\x1b[90mSearching registries for: "${query}"...\x1b[0m`)
   const start = performance.now()
 
-  let results: SkillRecommendation[] = []
-  let error: string | undefined
-  try {
-    results = await oasResolve(query)
-  } catch (err) {
-    error = (err as Error).message
-  }
+  const [oasResult, shResult, localSkills] = await Promise.all([
+    oasResolve(query).catch((err: Error) => ({ error: err.message, results: [] as SkillRecommendation[] })),
+    skillsShSearch(query).then(results => ({ error: undefined, results })).catch((err: Error) => ({ error: err.message, results: [] as SkillRecommendation[] })),
+    scanLocalSkills(),
+  ])
 
-  const localSkills = await scanLocalSkills()
+  const oasError = 'error' in oasResult ? (oasResult as { error: string }).error : undefined
+  const oasResults = Array.isArray(oasResult) ? oasResult : (oasResult as { results: SkillRecommendation[] }).results
+  const shError = shResult.error
+  const shResults = shResult.results
+
+  const seen = new Set<string>()
+  const merged: SkillRecommendation[] = []
+  for (const r of [...oasResults, ...shResults]) {
+    const key = stripAnsi(r.name).toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push(r)
+  }
 
   const queryLower = query.toLowerCase()
   const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2)
   for (const ls of localSkills) {
     const nameLower = ls.name.toLowerCase()
     const matches = queryWords.some(w => nameLower.includes(w) || w.includes(nameLower))
-    if (matches && !results.some(r => r.name.toLowerCase() === nameLower)) {
-      results.push({
+    if (matches && !seen.has(nameLower)) {
+      seen.add(nameLower)
+      merged.push({
         name: ls.name,
         slug: ls.name,
         description: `Local ${ls.scope} skill`,
@@ -136,34 +148,36 @@ if (subcommand === 'search') {
 
   const latencyMs = Math.round(performance.now() - start)
 
+  const sources: string[] = []
+  if (oasResults.length > 0) sources.push(`OAS:${oasResults.length}`)
+  if (shResults.length > 0) sources.push(`skills.sh:${shResults.length}`)
+
   await trace({
     ts: now(),
     hook: 'loadout-search',
     layer: 'L0:Foundation',
-    result: error ?? `${results.length} skills found`,
+    result: `${merged.length} skills (${sources.join(', ')})${oasError ? ` OAS err: ${oasError}` : ''}${shError ? ` SH err: ${shError}` : ''}`,
     latencyMs,
     prompt_len: query.length,
-    matched: results.length > 0,
+    matched: merged.length > 0,
   })
 
-  if (error) {
-    console.error(`\x1b[31mError: ${stripAnsi(error)}\x1b[0m`)
-    console.log(`\x1b[90m(${latencyMs}ms)\x1b[0m`)
-    if (results.length > 0) {
-      console.log('\nLocal matches:')
-      printResults(results, localSkills)
-    }
+  if (oasError && shError && merged.length === 0) {
+    console.error(`\x1b[31mBoth sources failed: OAS: ${stripAnsi(oasError)}, skills.sh: ${stripAnsi(shError)}\x1b[0m`)
     process.exit(1)
   }
 
-  if (results.length === 0) {
+  if (oasError) console.log(`\x1b[90mOpenAgentSkill: ${stripAnsi(oasError)} (continuing with skills.sh)\x1b[0m`)
+  if (shError) console.log(`\x1b[90mskills.sh: ${stripAnsi(shError)} (continuing with OpenAgentSkill)\x1b[0m`)
+
+  if (merged.length === 0) {
     console.log(`No skills found for "${query}" \x1b[90m(${latencyMs}ms)\x1b[0m`)
     console.log(`\x1b[90mLocal skills installed: ${localSkills.length}\x1b[0m`)
     process.exit(0)
   }
 
-  console.log(`\x1b[90m${results.length} result(s) in ${latencyMs}ms\x1b[0m`)
-  printResults(results, localSkills)
+  console.log(`\x1b[90m${merged.length} result(s) from ${sources.join(' + ') || 'local'} in ${latencyMs}ms\x1b[0m`)
+  printResults(merged, localSkills)
   console.log(`\x1b[90mLocal skills installed: ${localSkills.length}\x1b[0m`)
 }
 

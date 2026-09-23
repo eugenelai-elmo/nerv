@@ -33,6 +33,16 @@
                         "description": "NERV v2 Jev risk-gate — warns on destructive/irreversible operations before execution"
                     }
                 ]
+            },
+            {
+                "matcher": "mcp__*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash $HOME/projects/nerv/hooks/guard-gate.sh",
+                        "description": "NERV v2 Laya guard — scans MCP tool inputs for prompt injection"
+                    }
+                ]
             }
         ],
         "Stop": [

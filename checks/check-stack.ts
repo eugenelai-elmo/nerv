@@ -113,14 +113,21 @@ await check(0, 'TypeScript compiles', async () => {
 
 await check(0, 'Provider files exist for config', async () => {
   const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
-  const config = JSON.parse(raw) as Record<string, { provider: string }>
+  const config = JSON.parse(raw) as Record<string, { provider?: string; chain?: string[] }>
   const missing: string[] = []
-  for (const [_layer, { provider }] of Object.entries(config)) {
-    const providerPath = join(ROOT, 'providers', `${provider}.ts`)
-    if (!await fileExists(providerPath)) missing.push(provider)
+  const checked: string[] = []
+  for (const [_layer, section] of Object.entries(config)) {
+    if (typeof section !== 'object' || section === null) continue
+    const providers = section.chain ?? (section.provider ? [section.provider] : [])
+    for (const p of providers) {
+      if (!p) continue
+      checked.push(p)
+      const providerPath = join(ROOT, 'providers', `${p}.ts`)
+      if (!await fileExists(providerPath)) missing.push(p)
+    }
   }
   if (missing.length > 0) return { status: 'fail', message: `Missing provider files: ${missing.join(', ')}` }
-  return { status: 'pass', message: 'All configured providers have source files' }
+  return { status: 'pass', message: `All ${checked.length} configured providers have source files` }
 })
 
 await check(0, 'Fallback providers exist', async () => {

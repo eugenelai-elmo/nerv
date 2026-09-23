@@ -131,6 +131,56 @@ async def score(req: ScoreRequest):
     return ScoreResponse(answers=answers, latency_ms=elapsed_ms)
 
 
+class GuardRequest(BaseModel):
+    text: str
+
+
+class GuardResponse(BaseModel):
+    flagged: bool
+    jailbreak: float
+    prompt_injection: float
+    sensitive_data: float
+    harm_severity: str
+    topic: str
+    latency_ms: int
+    provider: str = "laya-local"
+
+
+@app.post("/guard", response_model=GuardResponse)
+async def guard(req: GuardRequest):
+    if laya_engine is None:
+        raise RuntimeError("Laya model not loaded")
+
+    import laya as laya_lib
+    start = time.perf_counter()
+
+    questions = laya_lib.guard_questions()
+    raw_result = laya_engine.system_one(state=req.text, questions=questions)
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+
+    answers = raw_result.get("answers", {})
+    jailbreak = float(answers.get("jailbreak", {}).get("noul", 0))
+    injection = float(answers.get("prompt_injection", {}).get("noul", 0))
+    sensitive = float(answers.get("sensitive_data", {}).get("noul", 0))
+    harm = answers.get("harm_severity", {}).get("score", "none")
+    if isinstance(harm, (int, float)):
+        harm_labels = ["none", "minor", "serious", "severe"]
+        harm = harm_labels[min(int(harm), len(harm_labels) - 1)]
+    topic = answers.get("topic", {}).get("choice", "other")
+
+    flagged = jailbreak > 0.5 or injection > 0.5 or harm in ("serious", "severe")
+
+    return GuardResponse(
+        flagged=flagged,
+        jailbreak=jailbreak,
+        prompt_injection=injection,
+        sensitive_data=sensitive,
+        harm_severity=str(harm),
+        topic=topic,
+        latency_ms=elapsed_ms,
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8421, log_level="info")

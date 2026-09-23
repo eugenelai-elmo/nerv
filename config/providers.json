@@ -1,9 +1,8 @@
 {
   "scorer": {
-    "provider": "laya-local",
-    "fallback": "jev-typesafe",
+    "chain": ["laya-local", "jev-typesafe", "jev-fallback"],
     "config": {},
-    "note": "Laya (local, free) → Jev TypeSafe (network, paid) → jev-fallback (unknowns). Swap provider back to jev-typesafe if Laya not running."
+    "note": "Laya (local, free) → Jev TypeSafe (network, paid) → jev-fallback (unknowns). Swap chain order or remove entries as needed."
   },
   "router": {
     "provider": "keyword-router",
@@ -15,7 +14,7 @@
     "config": {}
   },
   "device": {
-    "provider": "argent",
+    "chain": ["argent", "artemis", "device-fallback"],
     "config": {}
   },
   "session": {

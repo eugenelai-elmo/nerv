@@ -103,7 +103,20 @@ Langfuse: native OTEL from agentgateway (config-only) — collection from onset
 - Token budgets: per-tenant ceiling. Product decision: per-tenant? Per-user? Plan add-on?
 - Cost attribution: virtual keys (per-tenant) + Langfuse OTEL (per-conversation)
 
-## Current State (14 Sep 2026)
+## Current State (22 Sep 2026)
+
+**22 Sep — Auth story RESOLVED for Chat (Dave Newson):**
+- **AG can't natively validate multi-tenant JWTs.** Confirmed. TMS issues one `kid` across ~500 per-tenant issuers; AG selects by `kid` first → rejects 499. Static-loading all tenant JWKS is a non-starter.
+- **Solution: `ext_authz`.** A super-thin external authorizer validates the JWT/JWKS combo at AG. AG forwards the same header downstream. Each layer re-validates independently:
+  1. Kong validates JWT (already does this)
+  2. AG `ext_authz` validates JWT/JWKS (new — thin service)
+  3. Domain MCP re-validates JWT (contract rule)
+  4. TMS/backing API re-validates JWT + granular permissions (already does this)
+- **OIDC scopes (IN-4774/4775/4776) NOT needed for Chat.** Those are public MCP concerns (Glean, Claude Desktop). Chat uses the user's existing web JWT — no PKCE, no MCP-scoped tokens. Dave: "I don't think they're needed for Chat... the APIs themselves must implement auth constraints based on the logged in user anyway."
+- **Chat auth = JWT passthrough.** Chat panel has the user's active web JWT. Forwarded as a backend call through every layer. JWT contains tenancy. Dave suggests `<tenant>.elmodev.com/api/mcp` pattern to avoid ambiguity, but "if the JWT is forwarded, it probably won't matter."
+- **Public MCP auth is separate.** The kid/scope/PKCE complexity was always a public MCP problem (external clients like Glean). Dave: "The initial wander down the road into public-mcp with Glean is what's led us so far astray." Can be addressed later without blocking Chat.
+- **Rate limiting for public MCP** — Dave wants another run at tenant/user rate limiting, but explicitly says "we have time to figure an alternate."
+- **Impact: "AG or Orchestrator by Oct 1" pressure is gone for Chat.** AG + ext_authz is the path. No Orchestrator fallback needed.
 
 **14 Sep meeting (Josh, Maulik, DP, Allan, Eugene, Anu, Nick):**
 - Josh: hard deadline Oct 1 for MCP Blitz. If AG auth isn't solved, Orchestrator ships by default.
@@ -160,7 +173,8 @@ Josh 14 Sep: If AG auth isn't solved by Oct, Orchestrator ships. K1 board wants 
 
 - **Chat API ownership** — asked DP if his team takes the build. Awaiting answer. Determines Q2 planning.
 - **Chat API on staging** — nothing deployable in `elmo-chat-service` (gutted). DP's POC (`elmo-ai-chat-assistant`) is the only working backend. Needs deploying + Kong route for Oct blitz.
-- **Auth story** — AG over Orchestrator contingent. Dave Newson's court. If not solved by Oct, Orchestrator wins by default.
+- ~~**Auth story** — AG over Orchestrator contingent. Dave Newson's court. If not solved by Oct, Orchestrator wins by default.~~ **RESOLVED 22 Sep.** AG + `ext_authz` for Chat. JWT passthrough, each layer validates. No Orchestrator fallback needed. Public MCP auth (scopes, kid, PKCE) deferred — not blocking Chat.
+- **ext_authz service** — needs building. Thin JWT/JWKS validator for AG. Scope TBD (who builds, where it lives).
 - **Keycloak** — affects external MCP path only (Claude Desktop, Glean). Chat path through Kong unaffected.
 - **menu-ext integration** (ESL-4164) — legacy TMS pages need Ask ELMO. Separate from SPA path.
 - **frontendElmoChat flag** — needs creating in LaunchDarkly dashboard.

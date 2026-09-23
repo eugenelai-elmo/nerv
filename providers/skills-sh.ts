@@ -5,8 +5,11 @@ import type { SkillRecommendation } from './openagentskill.js'
 const exec = promisify(execFile)
 
 function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/[\x00-\x1f\x7f]|\x1b\[[0-9;]*[a-zA-Z]/g, '')
+  return str
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\[[\d;]*m/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]/g, '')
 }
 
 function parseInstalls(raw: string): number | undefined {
@@ -24,15 +27,18 @@ export async function search(query: string): Promise<SkillRecommendation[]> {
   try {
     const result = await exec('npx', ['skills', 'search', query], {
       timeout: 15_000,
-      env: { ...process.env, NO_COLOR: '1' },
     })
     stdout = result.stdout
   } catch (err) {
-    const e = err as { code?: string; stderr?: string }
+    const e = err as { code?: string | number | null; stderr?: string; stdout?: string; signal?: string }
     if (e.code === 'ENOENT' || e.stderr?.includes('not found')) {
       return []
     }
-    throw err
+    if (e.stdout && e.stdout.length > 10) {
+      stdout = e.stdout
+    } else {
+      throw err
+    }
   }
 
   const clean = stripAnsi(stdout)

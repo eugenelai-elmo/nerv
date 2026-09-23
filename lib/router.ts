@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { resolveAndCall } from './resolve-provider.js'
+import { trace, now } from './trace.js'
 import type { SkillEntry, SkillMatch, RouterResult, RouterProvider } from './types.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -35,6 +36,16 @@ export async function route(prompt: string): Promise<RouterResult> {
   )
 
   const result: RouterResult = { matches, provider: providerName, latencyMs }
+
+  await trace({
+    ts: now(),
+    hook: 'router.route',
+    layer: 'L2:Router',
+    provider: providerName,
+    latencyMs,
+    result: `${matches.length} matches`,
+    prompt_len: prompt.length,
+  })
 
   cache.set(key, { result, expires: Date.now() + CACHE_TTL_MS })
 

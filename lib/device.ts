@@ -1,8 +1,22 @@
 import { resolveProvider } from './resolve-provider.js'
+import { trace, now } from './trace.js'
 import type { DeviceProvider, DeviceInfo, Screenshot, DeviceResult } from './types.js'
 
+let _cachedProvider: DeviceProvider | null = null
+
 async function getProvider(): Promise<DeviceProvider> {
-  return resolveProvider<DeviceProvider>('device')
+  if (_cachedProvider) return _cachedProvider
+  const start = performance.now()
+  const provider = await resolveProvider<DeviceProvider>('device')
+  await trace({
+    ts: now(),
+    hook: 'device.resolve',
+    layer: 'L5:Mobile',
+    provider: provider.name,
+    latencyMs: Math.round(performance.now() - start),
+  })
+  _cachedProvider = provider
+  return provider
 }
 
 export async function listDevices(): Promise<DeviceInfo[]> {

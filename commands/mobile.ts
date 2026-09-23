@@ -21,6 +21,7 @@ import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import type { Orchestrator, OrchestratorContext } from '../lib/types.js'
 import { decide } from '../lib/decide.js'
+import { trace, now } from '../lib/trace.js'
 
 const exec = promisify(execFile)
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -407,6 +408,14 @@ async function handleDev() {
     console.log(`Target: ${result.context.repoPath}`)
     console.log('Context resolved. Ready for direct implementation.')
   }
+
+  await trace({
+    ts: now(),
+    hook: 'mobile.dev',
+    layer: 'L8:Orchestrator',
+    provider: result.via,
+    result: `${result.mode} → ${result.action}`,
+  })
 
   // Machine-readable output on stderr for downstream tooling
   console.error(JSON.stringify(result))

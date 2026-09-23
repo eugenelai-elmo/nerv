@@ -1,4 +1,5 @@
 import { resolveAndCall } from './resolve-provider.js'
+import { trace, now } from './trace.js'
 import type { Dimension, ScorerResult, ScorerProvider } from './types.js'
 
 export async function score(state: string, dimensions: Dimension[]): Promise<ScorerResult> {
@@ -6,6 +7,15 @@ export async function score(state: string, dimensions: Dimension[]): Promise<Sco
     'scorer',
     (provider) => provider.score(state, dimensions),
   )
+
+  await trace({
+    ts: now(),
+    hook: 'scorer.score',
+    layer: 'L1:Scorer',
+    provider: providerName,
+    latencyMs,
+    result: `${dimensions.length} dimensions`,
+  })
 
   return { scores, provider: providerName, latencyMs }
 }

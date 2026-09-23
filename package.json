@@ -11,6 +11,7 @@
     "mobile:start:ios": "npx tsx commands/mobile.ts start ios",
     "mobile:start:android": "npx tsx commands/mobile.ts start android",
     "mobile:stop": "npx tsx commands/mobile.ts stop",
+    "mobile:dev": "npx tsx commands/mobile.ts dev",
     "trace": "npx tsx commands/trace.ts",
     "trace:stats": "npx tsx commands/trace.ts stats",
     "trace:clear": "npx tsx commands/trace.ts clear",

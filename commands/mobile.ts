@@ -1,22 +1,28 @@
 #!/usr/bin/env npx tsx
 /**
- * nerv mobile — Preflight, launch, and connect to the ELMO mobile dev environment.
+ * nerv mobile — Preflight, launch, and develop in the ELMO mobile environment.
  *
  * Usage:
- *   npx tsx commands/mobile.ts              # preflight check (what's ready, what's missing)
- *   npx tsx commands/mobile.ts start        # start what's missing and connect
- *   npx tsx commands/mobile.ts start ios    # start iOS Simulator specifically
- *   npx tsx commands/mobile.ts start android # start Android Emulator specifically
- *   npx tsx commands/mobile.ts stop         # tear down dev server + simulators
+ *   npx tsx commands/mobile.ts                              # preflight check
+ *   npx tsx commands/mobile.ts start [ios|android]           # start dev environment
+ *   npx tsx commands/mobile.ts stop                          # tear down
+ *   npx tsx commands/mobile.ts dev <task>                    # implement via default orchestrator
+ *   npx tsx commands/mobile.ts dev plan <task>               # plan only (no code)
+ *   npx tsx commands/mobile.ts dev sync <task>               # sync from Jira only
+ *   npx tsx commands/mobile.ts dev <task> --via direct       # bypass orchestrator
+ *   npx tsx commands/mobile.ts dev <task> --via flowmo-v2    # use alternate orchestrator
  */
 
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { stat, readFile, access } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
+import type { Orchestrator, OrchestratorContext } from '../lib/types.js'
 
 const exec = promisify(execFile)
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MOBILE_REPO = join(homedir(), 'Projects', 'elmo-learning-mobile-app')
 const RG_REPO = join(homedir(), 'Projects', 'rg-mobile-app')
 
@@ -259,9 +265,140 @@ async function startDevServer() {
   console.log(`  \x1b[36mherdr pane send-keys w1:t1:p1 "cd ${repo} && npx expo start" Enter\x1b[0m`)
 }
 
+// ── Dev (orchestrated development) ────────────────────────────────
+
+interface DevArgs {
+  task: string
+  mode: string
+  via: string
+}
+
+function parseDevArgs(): DevArgs {
+  const KNOWN_MODES = ['plan', 'sync', 'implement']
+  const raw = process.argv.slice(3) // everything after "dev"
+  let via: string | null = null
+  const positionals: string[] = []
+
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === '--via' && raw[i + 1]) {
+      via = raw[++i]
+    } else if (!raw[i].startsWith('--')) {
+      positionals.push(raw[i])
+    }
+  }
+
+  let mode = 'implement'
+  let task: string
+
+  if (positionals.length >= 2 && KNOWN_MODES.includes(positionals[0])) {
+    mode = positionals[0]
+    task = positionals.slice(1).join(' ')
+  } else {
+    task = positionals.join(' ')
+  }
+
+  return { task, mode, via: via ?? '' }
+}
+
+async function loadDevConfig(): Promise<string> {
+  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
+  const config = JSON.parse(raw)
+  return config.dev?.defaultVia ?? 'flowmo'
+}
+
+async function loadOrchestrator(name: string): Promise<Orchestrator> {
+  const mod = await import(join(ROOT, 'orchestrators', `${name}.js`)) as { default: Orchestrator }
+  return mod.default
+}
+
+async function handleDev() {
+  const args = parseDevArgs()
+
+  if (!args.task) {
+    console.log('')
+    console.log('\x1b[1mnerv mobile dev\x1b[0m — orchestrated mobile development')
+    console.log('')
+    console.log('Usage:')
+    console.log('  nerv mobile dev <task>                 implement via default orchestrator')
+    console.log('  nerv mobile dev plan <task>            plan only (no code)')
+    console.log('  nerv mobile dev sync <task>            sync from Jira only')
+    console.log('  nerv mobile dev <task> --via direct    bypass orchestrator')
+    console.log('')
+    const defaultVia = await loadDevConfig()
+    console.log(`Default orchestrator: \x1b[36m${defaultVia}\x1b[0m`)
+    console.log('')
+    return
+  }
+
+  const defaultVia = await loadDevConfig()
+  const via = args.via || defaultVia
+
+  // Resolve repo
+  const repoPath = (await dirExists(MOBILE_REPO)) ? MOBILE_REPO : RG_REPO
+  const repo = repoPath.split('/').pop()!
+
+  const ctx: OrchestratorContext = {
+    task: args.task,
+    mode: args.mode,
+    repo,
+    repoPath,
+    via,
+  }
+
+  let orchestrator: Orchestrator
+  try {
+    orchestrator = await loadOrchestrator(via)
+  } catch {
+    console.error(`\x1b[31mOrchestrator "${via}" not found.\x1b[0m`)
+    console.error(`Available: flowmo, direct`)
+    process.exit(1)
+  }
+
+  const result = orchestrator.resolve(ctx)
+
+  // Print resolution
+  console.log('')
+  console.log('\x1b[1mNERV Mobile Dev\x1b[0m')
+  console.log('═'.repeat(50))
+  console.log(`  Task:   ${result.context.task}`)
+  console.log(`  Via:    \x1b[36m${result.via}\x1b[0m${via === defaultVia ? ' (default)' : ''}`)
+  console.log(`  Mode:   ${result.mode}`)
+  console.log(`  Repo:   ${result.context.repoPath}`)
+  console.log('')
+
+  if (result.action === 'invoke-skill') {
+    const invocation = `/${result.skill} ${result.skillArgs}`
+    const repoLine = `Target repo: ${result.context.repo}`
+    const width = Math.max(invocation.length + 4, repoLine.length + 4, 48)
+    const visLen = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '').length
+    const pad = (s: string) => '│ ' + s + ' '.repeat(Math.max(0, width - visLen(s) - 2)) + ' │'
+
+    console.log('┌' + '─'.repeat(width) + '┐')
+    console.log(pad('\x1b[1mInvoke:\x1b[0m'))
+    console.log(pad(`  ${invocation}`))
+    console.log(pad(''))
+    console.log(pad(`\x1b[90m${repoLine}\x1b[0m`))
+    console.log('└' + '─'.repeat(width) + '┘')
+  } else {
+    console.log('\x1b[33mDirect mode\x1b[0m — no orchestrator.')
+    console.log(`Target: ${result.context.repoPath}`)
+    console.log('Context resolved. Ready for direct implementation.')
+  }
+
+  // Machine-readable output on stderr for downstream tooling
+  console.error(JSON.stringify(result))
+
+  console.log('')
+}
+
 // ── Main ───────────────────────────────────────────────────────────
 
 async function main() {
+  if (MODE === 'dev') {
+    await handleDev()
+    return
+  }
+
   console.log('')
   console.log('\x1b[1mNERV Mobile — Developer Environment\x1b[0m')
   console.log('═'.repeat(50))

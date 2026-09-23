@@ -166,6 +166,32 @@ export interface DecisionResult {
   latencyMs: number
 }
 
+// Orchestrator (dev routing)
+
+export interface OrchestratorContext {
+  task: string
+  mode: string
+  repo: string
+  repoPath: string
+  via: string
+}
+
+export interface OrchestratorResult {
+  via: string
+  mode: string
+  action: 'invoke-skill' | 'context-only'
+  skill?: string
+  skillArgs?: string
+  context: OrchestratorContext
+}
+
+export interface Orchestrator {
+  name: string
+  modes: string[]
+  defaultMode: string
+  resolve(ctx: OrchestratorContext): OrchestratorResult
+}
+
 // Config
 
 export interface ProviderConfig {
@@ -189,5 +215,8 @@ export interface ProviderConfig {
   session: {
     provider: 'herdr' | 'tmux-fallback'
     config: Record<string, string>
+  }
+  dev?: {
+    defaultVia: string
   }
 }

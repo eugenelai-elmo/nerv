@@ -1,0 +1,33 @@
+{
+  "name": "dev-mode",
+  "description": "Infer the dev subcommand mode (implement/plan/sync) from the task description. Explicit mode args always override.",
+  "dimensions": [
+    {
+      "name": "mode",
+      "question": {
+        "type": "choice",
+        "instructions": "Given a developer task description, classify the intended mode of work.",
+        "criteria": {
+          "implement": "Task describes a concrete code change, feature addition, or bug fix — something to build or ship",
+          "plan": "Task is exploratory, asks 'what would it take', scoping, architecture question, or design discussion",
+          "sync": "Task references a Jira ticket key pattern (e.g. HPI-1915, LMS-1248, ET-10798) — pull context from the ticket"
+        }
+      }
+    },
+    {
+      "name": "confidence",
+      "question": {
+        "type": "score",
+        "instructions": "How confident are you about the mode classification? Consider: is the intent clear and unambiguous, or could it reasonably be multiple modes?",
+        "criteria": ["very uncertain", "somewhat uncertain", "moderate", "fairly confident", "very confident"]
+      }
+    },
+    {
+      "name": "has_ticket_ref",
+      "question": {
+        "type": "noul",
+        "instructions": "Does the task contain what looks like a Jira ticket reference? Look for patterns like ABC-1234, PROJ-999, two-to-five uppercase letters followed by a dash and digits."
+      }
+    }
+  ]
+}

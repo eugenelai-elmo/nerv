@@ -20,6 +20,7 @@ import { join, dirname } from 'node:path'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import type { Orchestrator, OrchestratorContext } from '../lib/types.js'
+import { decide } from '../lib/decide.js'
 
 const exec = promisify(execFile)
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -270,6 +271,7 @@ async function startDevServer() {
 interface DevArgs {
   task: string
   mode: string
+  explicitMode: boolean
   via: string
 }
 
@@ -288,16 +290,18 @@ function parseDevArgs(): DevArgs {
   }
 
   let mode = 'implement'
+  let explicitMode = false
   let task: string
 
   if (positionals.length >= 2 && KNOWN_MODES.includes(positionals[0])) {
     mode = positionals[0]
+    explicitMode = true
     task = positionals.slice(1).join(' ')
   } else {
     task = positionals.join(' ')
   }
 
-  return { task, mode, via: via ?? '' }
+  return { task, mode, explicitMode, via: via ?? '' }
 }
 
 async function loadDevConfig(): Promise<string> {
@@ -330,6 +334,25 @@ async function handleDev() {
     return
   }
 
+  // Infer mode via Laya/Jev when not explicit
+  let mode = args.mode
+  let modeLabel: string
+
+  if (args.explicitMode) {
+    modeLabel = '(explicit)'
+  } else {
+    try {
+      const inference = await decide('dev-mode', args.task)
+      const VALID_MODES = ['implement', 'plan', 'sync']
+      if (VALID_MODES.includes(inference.decision)) {
+        mode = inference.decision
+      }
+      modeLabel = `(inferred via ${inference.provider}, ${inference.latencyMs}ms)`
+    } catch {
+      modeLabel = '(default)'
+    }
+  }
+
   const defaultVia = await loadDevConfig()
   const via = args.via || defaultVia
 
@@ -339,7 +362,7 @@ async function handleDev() {
 
   const ctx: OrchestratorContext = {
     task: args.task,
-    mode: args.mode,
+    mode,
     repo,
     repoPath,
     via,
@@ -362,7 +385,7 @@ async function handleDev() {
   console.log('═'.repeat(50))
   console.log(`  Task:   ${result.context.task}`)
   console.log(`  Via:    \x1b[36m${result.via}\x1b[0m${via === defaultVia ? ' (default)' : ''}`)
-  console.log(`  Mode:   ${result.mode}`)
+  console.log(`  Mode:   ${result.mode} \x1b[90m${modeLabel}\x1b[0m`)
   console.log(`  Repo:   ${result.context.repoPath}`)
   console.log('')
 

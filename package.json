@@ -20,7 +20,10 @@
     "trace:stats": "npx tsx commands/trace.ts stats",
     "trace:clear": "npx tsx commands/trace.ts clear",
     "loadout": "npx tsx commands/loadout.ts",
-    "loadout:search": "npx tsx commands/loadout.ts search"
+    "loadout:search": "npx tsx commands/loadout.ts search",
+    "decide": "npx tsx commands/decide.ts",
+    "decide:list": "npx tsx commands/decide.ts list",
+    "export-training": "npx tsx commands/export-training.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

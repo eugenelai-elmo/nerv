@@ -19,6 +19,7 @@ nerv — NERV command seat
 Commands:
   mobile [check|start|stop|dev]   Mobile dev environment & orchestrated development
   loadout [search|sources|local]  Skill discovery
+  decide [list|<name>]            On-demand decision scoring via Jev/Laya
   trace [show|tail|stats|clear]   Runtime trace viewer
   check [--verbose]               Stack health check
 
@@ -32,6 +33,7 @@ shift 2>/dev/null || true
 case "$cmd" in
   mobile)   exec npx tsx commands/mobile.ts "$@" ;;
   loadout)  exec npx tsx commands/loadout.ts "$@" ;;
+  decide)   exec npx tsx commands/decide.ts "$@" ;;
   trace)    exec npx tsx commands/trace.ts "$@" ;;
   check)    exec npx tsx checks/check-stack.ts "$@" ;;
   help|-h|--help)

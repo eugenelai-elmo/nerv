@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { score as globalScore } from './scorer.js'
-import type { DecisionDefinition, DecisionResult, Dimension, ScorerProvider, ProviderConfig } from './types.js'
+import type { DecisionDefinition, DecisionResult, Dimension, ScorerProvider } from './types.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DECISIONS_DIR = join(ROOT, 'decisions')

@@ -168,26 +168,22 @@ export interface DecisionResult {
 
 // Config
 
+export interface ProviderSectionSingle {
+  provider: string
+  config: Record<string, string>
+}
+
+export interface ProviderSectionChain {
+  chain: string[]
+  config: Record<string, string>
+}
+
+export type ProviderSection = ProviderSectionSingle | ProviderSectionChain
+
 export interface ProviderConfig {
-  scorer: {
-    provider: 'laya-local' | 'jev-typesafe' | 'jev-cloudflare' | 'jev-openrouter' | 'jev-fallback'
-    fallback?: string
-    config: Record<string, string>
-  }
-  router: {
-    provider: 'jev-router' | 'keyword-router'
-    config: Record<string, string>
-  }
-  memory: {
-    provider: 'openviking' | 'filesystem-fallback'
-    config: Record<string, string>
-  }
-  device: {
-    provider: 'argent' | 'artemis' | 'device-fallback'
-    config: Record<string, string>
-  }
-  session: {
-    provider: 'herdr' | 'tmux-fallback'
-    config: Record<string, string>
-  }
+  scorer: ProviderSection
+  router: ProviderSection
+  memory: ProviderSection
+  device: ProviderSection
+  session: ProviderSection
 }

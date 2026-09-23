@@ -1,41 +1,8 @@
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-import type { DeviceProvider, DeviceInfo, Screenshot, DeviceResult, ProviderConfig } from './types.js'
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-
-async function loadConfig(): Promise<ProviderConfig> {
-  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
-  return JSON.parse(raw) as ProviderConfig
-}
-
-async function loadProvider(name: string): Promise<DeviceProvider> {
-  const mod = await import(join(ROOT, 'providers', `${name}.js`)) as { default: DeviceProvider }
-  return mod.default
-}
-
-const FALLBACK_CHAIN: Record<string, string> = {
-  'argent': 'artemis',
-  'artemis': 'device-fallback',
-}
+import { resolveProvider } from './resolve-provider.js'
+import type { DeviceProvider, DeviceInfo, Screenshot, DeviceResult } from './types.js'
 
 async function getProvider(): Promise<DeviceProvider> {
-  const config = await loadConfig()
-  let providerName: string = config.device.provider
-
-  while (providerName) {
-    try {
-      return await loadProvider(providerName)
-    } catch (err) {
-      const next = FALLBACK_CHAIN[providerName]
-      if (!next) throw err
-      console.error(`[device] ${providerName} failed: ${(err as Error).message}, falling back to ${next}`)
-      providerName = next
-    }
-  }
-
-  return await loadProvider('device-fallback')
+  return resolveProvider<DeviceProvider>('device')
 }
 
 export async function listDevices(): Promise<DeviceInfo[]> {

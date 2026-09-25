@@ -7,6 +7,11 @@
                 "hooks": [
                     {
                         "type": "command",
+                        "command": "bash $HOME/projects/nerv/hooks/flowmo-sync.sh",
+                        "description": "Pull latest flowmo from GitHub once per day"
+                    },
+                    {
+                        "type": "command",
                         "command": "bash $HOME/projects/nerv/hooks/audience-gate.sh",
                         "description": "NERV v2 Jev audience detection — reinforces tone-of-voice for outward-facing text"
                     },

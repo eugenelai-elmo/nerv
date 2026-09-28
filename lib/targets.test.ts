@@ -32,9 +32,20 @@ before(async () => {
   await writeFile(join(tmp, 'flowmo', '.claude', 'related-repos.json'), JSON.stringify({
     '$note': 'ignored',
     beta: { relativePath: '../beta', kind: 'backend' },
+    delta: { relativePath: '../dev-stack/apps/delta', kind: 'frontend' },
+    epsilon: { relativePath: '../not-here' },
     gone: { relativePath: '../not-cloned' },
   }))
   process.env.FLOWMO_RELATED_REPOS = join(tmp, 'flowmo', '.claude', 'related-repos.json')
+  // per-machine override: moved clone (absolute), relative override, and an unknown key that must be ignored
+  await repo('elsewhere/delta')
+  await writeFile(join(tmp, 'local.json'), JSON.stringify({
+    '$note': 'ignored',
+    delta: join(tmp, 'elsewhere', 'delta'),
+    epsilon: '../beta',
+    ghost: join(tmp, 'beta'),
+  }))
+  process.env.FLOWMO_RELATED_REPOS_LOCAL = join(tmp, 'local.json')
   targets = await import('./targets.js')
 })
 
@@ -73,4 +84,13 @@ test('listTargets skips repos that are not cloned', async () => {
   const names = (await targets.listTargets()).map(t => t.name)
   assert.ok(names.includes('beta'))
   assert.ok(!names.includes('gone'))
+})
+
+test('related-repos.local.json overrides registry paths, absolute or relative to the flowmo root', async () => {
+  assert.equal(await targets.resolveTargetPath('delta'), join(tmp, 'elsewhere', 'delta'))
+  assert.equal(await targets.resolveTargetPath('epsilon'), join(tmp, 'beta'))
+})
+
+test('override keys that are not in the registry are ignored', async () => {
+  assert.equal(await targets.resolveTargetPath('ghost'), null)
 })

@@ -7,8 +7,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "bash $HOME/projects/nerv/hooks/flowmo-sync.sh",
-                        "description": "Pull latest flowmo from GitHub once per day"
+                        "command": "bash $HOME/Projects/nerv/hooks/flowmo-updates.sh",
+                        "description": "Once a day, fetch flowmo and report new upstream commits (never pulls)"
                     },
                     {
                         "type": "command",

@@ -5,6 +5,7 @@ import { homedir } from 'node:os'
 import { resolve as oasResolve, type SkillRecommendation } from '../providers/openagentskill.js'
 import { search as skillsShSearch } from '../providers/skills-sh.js'
 import { trace, now } from '../lib/trace.js'
+import { sanitize } from '../lib/sanitize.js'
 
 const args = process.argv.slice(2)
 const subcommand = args[0] ?? 'help'
@@ -50,13 +51,8 @@ async function scanLocalSkills(): Promise<LocalSkill[]> {
 
 // ── Formatters ───────────────────────────────────────────
 
-function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/[\x00-\x1f\x7f]|\x1b\[[0-9;]*[a-zA-Z]/g, '')
-}
-
 function truncate(str: string, max: number): string {
-  const safe = stripAnsi(str)
+  const safe = sanitize(str)
   if (safe.length <= max) return safe
   return safe.slice(0, max - 1) + '…'
 }
@@ -75,8 +71,8 @@ function printResults(results: SkillRecommendation[], localSkills: LocalSkill[])
     const score = r.matchScore > 0 ? String(r.matchScore).padStart(3) : '  -'
     const stars = r.stars ? (r.stars >= 1000 ? `${(r.stars / 1000).toFixed(1)}k` : String(r.stars)).padStart(5) : '    -'
     const desc = truncate(r.description, 45)
-    const installed = localNames.has(stripAnsi(r.name).toLowerCase()) ? ' \x1b[32m(installed)\x1b[0m' : ''
-    const repo = r.repo ? `\x1b[90m${stripAnsi(r.repo)}\x1b[0m` : ''
+    const installed = localNames.has(sanitize(r.name).toLowerCase()) ? ' \x1b[32m(installed)\x1b[0m' : ''
+    const repo = r.repo ? `\x1b[90m${sanitize(r.repo)}\x1b[0m` : ''
 
     console.log(`${rank}. ${name}  ${score}  ${stars}  ${desc}${installed}`)
     if (repo) console.log(`    ${repo}`)
@@ -122,7 +118,7 @@ if (subcommand === 'search') {
   const seen = new Set<string>()
   const merged: SkillRecommendation[] = []
   for (const r of [...oasResults, ...shResults]) {
-    const key = stripAnsi(r.name).toLowerCase()
+    const key = sanitize(r.name).toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
     merged.push(r)
@@ -163,12 +159,12 @@ if (subcommand === 'search') {
   })
 
   if (oasError && shError && merged.length === 0) {
-    console.error(`\x1b[31mBoth sources failed: OAS: ${stripAnsi(oasError)}, skills.sh: ${stripAnsi(shError)}\x1b[0m`)
+    console.error(`\x1b[31mBoth sources failed: OAS: ${sanitize(oasError)}, skills.sh: ${sanitize(shError)}\x1b[0m`)
     process.exit(1)
   }
 
-  if (oasError) console.log(`\x1b[90mOpenAgentSkill: ${stripAnsi(oasError)} (continuing with skills.sh)\x1b[0m`)
-  if (shError) console.log(`\x1b[90mskills.sh: ${stripAnsi(shError)} (continuing with OpenAgentSkill)\x1b[0m`)
+  if (oasError) console.log(`\x1b[90mOpenAgentSkill: ${sanitize(oasError)} (continuing with skills.sh)\x1b[0m`)
+  if (shError) console.log(`\x1b[90mskills.sh: ${sanitize(shError)} (continuing with OpenAgentSkill)\x1b[0m`)
 
   if (merged.length === 0) {
     console.log(`No skills found for "${query}" \x1b[90m(${latencyMs}ms)\x1b[0m`)

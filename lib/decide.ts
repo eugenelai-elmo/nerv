@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { score as globalScore } from './scorer.js'
+import { logDecision } from './decision-log.js'
 import type { DecisionDefinition, DecisionResult, Dimension, ScorerProvider } from './types.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -30,7 +31,7 @@ async function scoreWithProvider(providerName: string, state: string, dimensions
   return { scores, provider: provider.name, latencyMs: Math.round(performance.now() - start) }
 }
 
-export async function decide(name: string, state: string): Promise<DecisionResult> {
+export async function decide(name: string, state: string, opts: { log?: boolean } = {}): Promise<DecisionResult> {
   const def = await loadDecision(name)
   let result
 
@@ -52,6 +53,10 @@ export async function decide(name: string, state: string): Promise<DecisionResul
     decision = primary.answer ? 'yes' : 'no'
   } else {
     decision = String(primary.answer)
+  }
+
+  if (opts.log === true) {
+    await logDecision({ decision: name, state, predicted: decision, provider: result.provider, scores: result.scores })
   }
 
   return {

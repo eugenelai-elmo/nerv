@@ -1,27 +1,69 @@
 {
   "scorer": {
-    "chain": ["laya-local", "jev-typesafe", "jev-fallback"],
+    "chain": [
+      "laya-local",
+      "jev-typesafe",
+      "jev-fallback"
+    ],
     "config": {},
     "note": "Laya (local, free) → Jev TypeSafe (network, paid) → jev-fallback (unknowns). Swap chain order or remove entries as needed."
   },
   "router": {
-    "provider": "keyword-router",
+    "chain": [
+      "keyword-router"
+    ],
     "config": {},
     "note": "Skill routing handled by superpowers (in-context). Keyword-router kept as Layer 2 contract implementation; not called from hooks."
   },
   "memory": {
-    "provider": "filesystem-fallback",
-    "config": {}
+    "chain": [
+      "filesystem-fallback"
+    ],
+    "config": {},
+    "note": "Switch to [\"openviking\",\"filesystem-fallback\"] once OpenViking runs; filesystem-fallback is also appended automatically as last resort."
   },
   "device": {
-    "chain": ["argent", "artemis", "device-fallback"],
+    "chain": [
+      "argent",
+      "artemis",
+      "device-fallback"
+    ],
     "config": {}
   },
   "session": {
-    "provider": "herdr",
+    "chain": [
+      "herdr",
+      "tmux-fallback"
+    ],
     "config": {}
   },
   "dev": {
-    "defaultVia": "flowmo"
+    "chain": [
+      "nerv",
+      "flowmo",
+      "kernel",
+      "direct"
+    ],
+    "targets": {
+      "mobile": "~/Projects/elmo-learning-mobile-app",
+      "frontend": "~/Projects/elmo-application",
+      "flowmo": "~/Projects/flowmo"
+    },
+    "note": "Tried in order; the first orchestrator that supports the mode + input wins. 'nerv' only claims the modes it owns (rebase), so it sits first. Reorder to swap. One-off: --chain a,b or --via x.",
+    "repos": {
+      "elmo-application": {
+        "rebase": {
+          "verify": [
+            "pnpm nx run platform:check:types",
+            "pnpm nx run platform:lint",
+            "pnpm nx run platform:test",
+            "pnpm run check:boundaries"
+          ],
+          "afterRebase": [
+            "If libs/openapi-ts/ specs changed upstream: pnpm nx run openapi-ts:build:types"
+          ]
+        }
+      }
+    }
   }
 }

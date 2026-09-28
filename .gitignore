@@ -21,6 +21,10 @@ memories/
 
 # Python venv (Laya service)
 services/.venv/
+services/__pycache__/
+
+# Exported decision/training data (local, may contain prompt text)
+training-data/
 
 # Node
 node_modules/

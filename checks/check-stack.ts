@@ -68,6 +68,24 @@ async function fileExists(p: string): Promise<boolean> {
   }
 }
 
+const PROVIDER_SECTIONS = ['scorer', 'router', 'memory', 'device', 'session'] as const
+
+interface ProviderSectionShape {
+  provider?: string
+  chain?: string[]
+}
+
+// Accepts both config shapes: { provider: "x" } and { chain: ["x", "y"] }.
+function sectionChain(section: ProviderSectionShape | undefined): string[] {
+  if (!section) return []
+  if (Array.isArray(section.chain)) return section.chain.filter(Boolean)
+  return section.provider ? [section.provider] : []
+}
+
+async function loadProviderConfig(): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')) as Record<string, unknown>
+}
+
 // ── Layer 0: Foundation ────────────────────────────────────────────
 
 await check(0, 'providers.json parseable', async () => {
@@ -112,15 +130,11 @@ await check(0, 'TypeScript compiles', async () => {
 })
 
 await check(0, 'Provider files exist for config', async () => {
-  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
-  const config = JSON.parse(raw) as Record<string, { provider?: string; chain?: string[] }>
+  const config = await loadProviderConfig()
   const missing: string[] = []
   const checked: string[] = []
-  for (const [_layer, section] of Object.entries(config)) {
-    if (typeof section !== 'object' || section === null) continue
-    const providers = section.chain ?? (section.provider ? [section.provider] : [])
-    for (const p of providers) {
-      if (!p) continue
+  for (const name of PROVIDER_SECTIONS) {
+    for (const p of sectionChain(config[name] as ProviderSectionShape | undefined)) {
       checked.push(p)
       const providerPath = join(ROOT, 'providers', `${p}.ts`)
       if (!await fileExists(providerPath)) missing.push(p)
@@ -197,11 +211,11 @@ await check(1, 'Laya local server', async () => {
 })
 
 await check(1, 'Scorer fallback chain configured', async () => {
-  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
-  const config = JSON.parse(raw)
-  const primary = config.scorer?.provider
-  const fallback = config.scorer?.fallback ?? 'jev-fallback'
-  return { status: 'pass', message: `${primary} → ${fallback} → jev-fallback` }
+  const config = await loadProviderConfig()
+  const chain = sectionChain(config.scorer as ProviderSectionShape | undefined)
+  if (chain.length === 0) return { status: 'fail', message: 'scorer has neither chain nor provider' }
+  if (chain.length === 1) return { status: 'warn', message: `${chain[0]} (no fallback in chain)` }
+  return { status: 'pass', message: chain.join(' → ') }
 })
 
 // ── Layer 2: Router ────────────────────────────────────────────────
@@ -224,11 +238,10 @@ await check(2, 'Keyword fallback routes correctly', async () => {
 })
 
 await check(2, 'Skill routing delegated to superpowers', async () => {
-  const raw = await readFile(join(ROOT, 'config', 'providers.json'), 'utf-8')
-  const config = JSON.parse(raw)
-  const provider = config.router?.provider
-  if (provider === 'jev-router') return { status: 'warn', message: 'Still using jev-router — superpowers handles skill routing in-context now' }
-  return { status: 'pass', message: `Router provider: ${provider} (hook-based Jev routing retired)` }
+  const config = await loadProviderConfig()
+  const chain = sectionChain(config.router as ProviderSectionShape | undefined)
+  if (chain[0] === 'jev-router') return { status: 'warn', message: 'Still using jev-router — superpowers handles skill routing in-context now' }
+  return { status: 'pass', message: `Router chain: ${chain.join(' → ')} (hook-based Jev routing retired)` }
 })
 
 // ── Layer 3: Session (Herdr) ───────────────────────────────────────
@@ -569,6 +582,65 @@ await check(7, 'Session runs inside Herdr', async () => {
   }
 })
 
+// ── Layer 8: Orchestrators (dev routing) ───────────────────────────
+
+interface DevConfigShape {
+  chain?: string[]
+  targets?: Record<string, string>
+}
+
+async function loadDevConfig(): Promise<DevConfigShape | null> {
+  const dev = (await loadProviderConfig()).dev
+  return dev && typeof dev === 'object' ? (dev as DevConfigShape) : null
+}
+
+function expandHome(p: string): string {
+  return p === '~' || p.startsWith('~/') ? join(homedir(), p.slice(1)) : p
+}
+
+await check(8, 'dev.chain orchestrators exist', async () => {
+  const dev = await loadDevConfig()
+  if (!dev) return { status: 'skip', message: 'No dev section in providers.json' }
+  const chain = dev.chain ?? []
+  if (chain.length === 0) return { status: 'warn', message: 'dev.chain is empty — built-in default chain will be used' }
+  const missing: string[] = []
+  for (const name of chain) {
+    if (!await fileExists(join(ROOT, 'orchestrators', `${name}.ts`))) missing.push(name)
+  }
+  if (missing.length > 0) return { status: 'fail', message: `Missing orchestrators: ${missing.join(', ')}` }
+  return { status: 'pass', message: chain.join(' → ') }
+})
+
+await check(8, 'dev.targets resolve to git repos', async () => {
+  const dev = await loadDevConfig()
+  if (!dev) return { status: 'skip', message: 'No dev section in providers.json' }
+  const targets = Object.entries(dev.targets ?? {})
+  if (targets.length === 0) return { status: 'skip', message: 'No dev.targets aliases configured' }
+  const problems: string[] = []
+  for (const [alias, raw] of targets) {
+    const path = expandHome(raw)
+    try {
+      if (!(await stat(path)).isDirectory()) { problems.push(`${alias}: not a directory (${path})`); continue }
+    } catch {
+      problems.push(`${alias}: not found (${path})`)
+      continue
+    }
+    try {
+      await exec('git', ['-C', path, 'rev-parse', '--git-dir'], { timeout: 5_000 })
+    } catch {
+      problems.push(`${alias}: not a git repo (${path})`)
+    }
+  }
+  if (problems.length > 0) return { status: 'fail', message: problems.join('; ') }
+  return { status: 'pass', message: `${targets.length} targets: ${targets.map(([a]) => a).join(', ')}` }
+})
+
+await check(8, 'Rebase playbook present', async () => {
+  const path = join(ROOT, 'playbooks', 'rebase.md')
+  if (!await fileExists(path)) return { status: 'fail', message: `Missing ${path}` }
+  return { status: 'pass', message: 'playbooks/rebase.md' }
+})
+
 // ── Report ─────────────────────────────────────────────────────────
 
 console.log('')
@@ -579,7 +651,7 @@ let currentLayer = -1
 for (const r of results) {
   if (r.layer !== currentLayer) {
     currentLayer = r.layer
-    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Mobile (Argent+ARTEMIS)', 'Decisions', 'Wiring (Integration)']
+    const layerNames = ['Foundation', 'Scorer (Jev)', 'Router', 'Session (Herdr)', 'Memory', 'Mobile (Argent+ARTEMIS)', 'Decisions', 'Wiring (Integration)', 'Orchestrators (dev routing)']
     console.log(`\n\x1b[1mLayer ${r.layer}: ${layerNames[r.layer]}\x1b[0m`)
   }
   const latency = r.latencyMs > 0 ? ` \x1b[90m${r.latencyMs}ms\x1b[0m` : ''
@@ -611,7 +683,7 @@ for (const r of results) {
   else if (!layerStatus.has(r.layer)) layerStatus.set(r.layer, r.status)
 }
 
-const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Mobile', 'L6 Decisions', 'Wiring']
+const layerNames = ['L0 Foundation', 'L1 Scorer', 'L2 Router', 'L3 Session', 'L4 Memory', 'L5 Mobile', 'L6 Decisions', 'Wiring', 'L8 Orchestrators']
 console.log('')
 for (const [layer, status] of layerStatus) {
   console.log(`  ${icon(status)} ${layerNames[layer]}`)

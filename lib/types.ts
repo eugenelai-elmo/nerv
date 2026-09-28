@@ -1,3 +1,6 @@
+import type { Mode, TaskInput } from './modes.js'
+import type { RebaseProfile, RebaseOverrides } from './rebase-profile.js'
+
 // Jev question primitives
 
 export type JevChoice = {
@@ -168,28 +171,26 @@ export interface DecisionResult {
 
 // Orchestrator (dev routing)
 
-export interface OrchestratorContext {
-  task: string
-  mode: string
-  repo: string
-  repoPath: string
-  via: string
+export interface RepoContext {
+  name: string
+  path: string
 }
 
-export interface OrchestratorResult {
-  via: string
-  mode: string
-  action: 'invoke-skill' | 'context-only'
-  skill?: string
-  skillArgs?: string
-  context: OrchestratorContext
+export interface RepoSkill {
+  name: string
+  description: string
 }
+
+export type Resolution =
+  | { kind: 'invoke'; invocation: string; skills?: RepoSkill[] }
+  | { kind: 'context'; skills?: RepoSkill[]; note?: string }
+  | { kind: 'playbook'; playbook: string; profile: RebaseProfile; skills?: RepoSkill[] }
 
 export interface Orchestrator {
   name: string
-  modes: string[]
-  defaultMode: string
-  resolve(ctx: OrchestratorContext): OrchestratorResult
+  // true when this orchestrator can take the task here; otherwise a short reason it was skipped
+  supports(mode: Mode, input: TaskInput, repo: RepoContext): Promise<true | string>
+  resolve(mode: Mode, input: TaskInput, repo: RepoContext): Promise<Resolution>
 }
 
 // Config
@@ -213,6 +214,8 @@ export interface ProviderConfig {
   device: ProviderSection
   session: ProviderSection
   dev?: {
-    defaultVia: string
+    chain: string[]
+    targets?: Record<string, string>
+    repos?: Record<string, { rebase?: RebaseOverrides }>
   }
 }

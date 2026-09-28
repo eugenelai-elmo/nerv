@@ -7,6 +7,7 @@
   },
   "scripts": {
     "nerv": "./bin/nerv",
+    "test": "npx tsx --test lib/*.test.ts",
     "score": "npx tsx spikes/jev-sprint-scorer.ts",
     "check": "npx tsx checks/check-stack.ts",
     "check:verbose": "npx tsx checks/check-stack.ts --verbose",

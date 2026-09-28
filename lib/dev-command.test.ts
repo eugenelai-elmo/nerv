@@ -1,6 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { parseDevArgs, DevArgsError } from './dev-command.js'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const base = { via: undefined, chain: undefined, repo: undefined, json: false }
 
@@ -54,4 +59,10 @@ test('fixed target (nerv mobile dev) treats the first positional as the mode', (
 
 test('no arguments yields no target (caller shows help)', () => {
   assert.deepEqual(parseDevArgs([]), { ...base, target: null, mode: null, task: '' })
+})
+
+test('a mistyped target with no task reports the unknown target and exits 1', () => {
+  const r = spawnSync('npx', ['tsx', join(ROOT, 'commands', 'dev.ts'), 'mobil'], { cwd: ROOT, encoding: 'utf-8' })
+  assert.equal(r.status, 1)
+  assert.match(r.stderr, /Unknown target "mobil"/)
 })

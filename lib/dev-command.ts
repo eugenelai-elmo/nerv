@@ -200,19 +200,25 @@ export async function runDev(argv: string[], opts: RunDevOptions = {}): Promise<
   }
   const chainNames = await resolveChainNames({ via: args.via, chain: args.chain })
 
-  const needsTask = !args.mode || !TASKLESS_MODES.includes(args.mode)
-  if (!args.target || (needsTask && !args.task)) {
+  if (!args.target) {
     await printDevHelp(usage, opts.target, chainNames)
-    if (!args.target && argv.length > 0) process.exit(1)
+    if (argv.length > 0) process.exit(1)
     return
   }
 
+  // Resolve before any help, so a mistyped target says so instead of printing usage.
   let repo: RepoContext
   try {
     repo = await resolveTarget(args.target, args.repo)
   } catch (err) {
     if (err instanceof TargetError) fail(err.message)
     throw err
+  }
+
+  const needsTask = !args.mode || !TASKLESS_MODES.includes(args.mode)
+  if (needsTask && !args.task) {
+    await printDevHelp(usage, opts.target, chainNames)
+    return
   }
 
   // Mode: explicit > rule > implement. The scorer only shadows (see recordDevModeSample).

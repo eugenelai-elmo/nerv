@@ -29,6 +29,7 @@ Record the return point (`branch`, `head`) in your report before changing anythi
 2. If it fails with `RPC failed; curl 16 Error in the HTTP2 framing layer`, retry once with `git -C <path> -c http.version=HTTP/1.1 fetch origin <base>`.
 3. Any other fetch failure (auth, host, DNS): report the remote URL (`git -C <path> remote -v`) and **ask** before changing it. Never rewrite a remote unprompted.
 4. `git -C <path> log --oneline HEAD..origin/<base>` — if empty, report "already up to date" and skip to §6 only if the user asked for verification.
+5. Untracked-path collisions (the profile only checked the last fetch): list files upstream adds with `git -C <path> diff --name-only --diff-filter=A HEAD...origin/<base>` and compare with `git -C <path> ls-files --others --exclude-standard`. Any overlap would make the rebase abort ("untracked working tree files would be overwritten") — report the paths and stop; don't move or delete them without approval.
 
 ## 3. Understand the slice, then assess risk
 

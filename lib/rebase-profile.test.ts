@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { buildRebaseProfile } from './rebase-profile.js'
@@ -165,7 +165,7 @@ test('untracked files are reported but do not block', async () => {
   await rm(join(clone, '.sprintmo'), { recursive: true })
   await rm(join(clone, 'loose.txt'))
   assert.deepEqual(p.blockers, [])
-  assert.deepEqual(p.notes, ['2 untracked paths (not blocking; git leaves them alone)'])
+  assert.deepEqual(p.notes, ['2 untracked paths (no collision with origin/master as last fetched; the playbook re-checks after fetch)'])
 })
 
 test('a modified tracked file still blocks', async () => {
@@ -188,4 +188,30 @@ test('version-like segments are not tickets', async () => {
   const p = await buildRebaseProfile(repo())
   g(clone, 'checkout', '-q', 'feature/HPI-1915-payslips')
   assert.equal(p.slice, null)
+})
+
+test('a symlinked (dev-linked) umbrella plugin version is found', async () => {
+  const real = join(tmp, 'plugin-src')
+  await write(join(real, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'flowmo-linked', flowmo: { defaults: { frontend: { integrationBranch: 'linked' } } } }))
+  const root = join(tmp, 'plugins-symlink')
+  await mkdir(join(root, 'elmo', 'flowmo-linked'), { recursive: true })
+  await symlink(real, join(root, 'elmo', 'flowmo-linked', 'dev'))
+  const p = await buildRebaseProfile(repo(), { kind: 'frontend', flowmoUserConfig: join(tmp, 'absent.json'), pluginsRoot: root })
+  assert.equal(p.base, 'linked')
+})
+
+test('upstream adding a file at an untracked local path blocks', async () => {
+  const pusher = join(tmp, 'pusher')
+  g(tmp, 'clone', '-q', 'remote.git', 'pusher')
+  await writeFile(join(pusher, 'incoming.txt'), 'from upstream\n')
+  g(pusher, 'add', 'incoming.txt')
+  g(pusher, 'commit', '-qm', 'upstream adds incoming.txt')
+  g(pusher, 'push', '-q', 'origin', 'master')
+  g(clone, 'fetch', '-q', 'origin')
+  await writeFile(join(clone, 'incoming.txt'), 'local scratch\n')
+  const p = await buildRebaseProfile(repo())
+  await rm(join(clone, 'incoming.txt'))
+  assert.ok(p.blockers.some(b => b.includes('upstream adds 1 file(s) at untracked local paths (incoming.txt)')), p.blockers.join('; '))
+  const clean = await buildRebaseProfile(repo())
+  assert.deepEqual(clean.blockers, [])
 })

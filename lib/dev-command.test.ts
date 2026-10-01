@@ -18,12 +18,12 @@ test('task words are joined; no mode means null', () => {
 })
 
 test('taskless mode', () => {
-  assert.deepEqual(parseDevArgs(['mobile', 'rebase']), { ...base, target: 'mobile', mode: 'rebase', task: '' })
+  assert.deepEqual(parseDevArgs(['mobile', 'refresh']), { ...base, target: 'mobile', mode: 'refresh', task: '' })
 })
 
 test('--repo accepts both separate and = forms', () => {
-  assert.equal(parseDevArgs(['mobile', 'rebase', '--repo', '/tmp/wt']).repo, '/tmp/wt')
-  assert.equal(parseDevArgs(['mobile', 'rebase', '--repo=/tmp/wt']).repo, '/tmp/wt')
+  assert.equal(parseDevArgs(['mobile', 'refresh', '--repo', '/tmp/wt']).repo, '/tmp/wt')
+  assert.equal(parseDevArgs(['mobile', 'refresh', '--repo=/tmp/wt']).repo, '/tmp/wt')
 })
 
 test('--via, --chain and --json', () => {
@@ -32,28 +32,28 @@ test('--via, --chain and --json', () => {
 })
 
 test('flags may come before the target', () => {
-  assert.deepEqual(parseDevArgs(['--json', '--repo', '/tmp/wt', 'mobile', 'rebase']), { ...base, json: true, repo: '/tmp/wt', target: 'mobile', mode: 'rebase', task: '' })
+  assert.deepEqual(parseDevArgs(['--json', '--repo', '/tmp/wt', 'mobile', 'refresh']), { ...base, json: true, repo: '/tmp/wt', target: 'mobile', mode: 'refresh', task: '' })
 })
 
 test('a value flag with no value is an error, not silently dropped', () => {
-  for (const argv of [['mobile', 'rebase', '--repo'], ['mobile', 'rebase', '--repo='], ['mobile', 'rebase', '--repo', '--json'], ['mobile', 'plan', 'x', '--via']]) {
+  for (const argv of [['mobile', 'refresh', '--repo'], ['mobile', 'refresh', '--repo='], ['mobile', 'refresh', '--repo', '--json'], ['mobile', 'plan', 'x', '--via']]) {
     assert.throws(() => parseDevArgs(argv), (err: Error) => err instanceof DevArgsError && /needs a value/.test(err.message), argv.join(' '))
   }
 })
 
 test('unknown and malformed flags are errors', () => {
-  assert.throws(() => parseDevArgs(['mobile', 'rebase', '--force']), (err: Error) => err instanceof DevArgsError && /Unknown option --force/.test(err.message))
-  assert.throws(() => parseDevArgs(['mobile', 'rebase', '--json=yes']), /takes no value/)
+  assert.throws(() => parseDevArgs(['mobile', 'refresh', '--force']), (err: Error) => err instanceof DevArgsError && /Unknown option --force/.test(err.message))
+  assert.throws(() => parseDevArgs(['mobile', 'refresh', '--json=yes']), /takes no value/)
 })
 
 test('a mode in the target slot means the target is missing', () => {
-  for (const m of ['rebase', 'plan', 'implement', 'pull', 'ship']) {
+  for (const m of ['ticket', 'intake', 'plan', 'implement', 'refresh', 'ship']) {
     assert.throws(() => parseDevArgs([m, 'x']), (err: Error) => err instanceof DevArgsError && err.message === `Missing target — e.g. nerv dev mobile ${m}`, m)
   }
 })
 
 test('fixed target (nerv mobile dev) treats the first positional as the mode', () => {
-  assert.deepEqual(parseDevArgs(['rebase'], 'mobile'), { ...base, target: 'mobile', mode: 'rebase', task: '' })
+  assert.deepEqual(parseDevArgs(['refresh'], 'mobile'), { ...base, target: 'mobile', mode: 'refresh', task: '' })
   assert.deepEqual(parseDevArgs(['plan', 'HPI-1'], 'mobile'), { ...base, target: 'mobile', mode: 'plan', task: 'HPI-1' })
 })
 
@@ -65,4 +65,12 @@ test('a mistyped target with no task reports the unknown target and exits 1', ()
   const r = spawnSync('npx', ['tsx', join(ROOT, 'commands', 'dev.ts'), 'mobil'], { cwd: ROOT, encoding: 'utf-8' })
   assert.equal(r.status, 1)
   assert.match(r.stderr, /Unknown target "mobil"/)
+})
+
+test('retired or tool-native mode words fail with the NERV name instead of becoming a task', () => {
+  assert.throws(() => parseDevArgs(['mobile', 'rebase']), /"rebase" is not a NERV mode — use refresh/)
+  assert.throws(() => parseDevArgs(['mobile', 'sync']), /use refresh \(update the branch\) or intake/)
+  assert.throws(() => parseDevArgs(['mobile', 'pull', 'LMS-1']), /use intake/)
+  assert.throws(() => parseDevArgs(['mobile', 'issue', 'x']), /use plan/)
+  assert.equal(parseDevArgs(['mobile', 'fix', 'the', 'rebase', 'button']).task, 'fix the rebase button')
 })

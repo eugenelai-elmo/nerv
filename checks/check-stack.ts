@@ -636,9 +636,9 @@ await check(8, 'dev.targets resolve to git repos', async () => {
 })
 
 await check(8, 'Rebase playbook present', async () => {
-  const path = join(ROOT, 'playbooks', 'rebase.md')
+  const path = join(ROOT, 'playbooks', 'refresh.md')
   if (!await fileExists(path)) return { status: 'fail', message: `Missing ${path}` }
-  return { status: 'pass', message: 'playbooks/rebase.md' }
+  return { status: 'pass', message: 'playbooks/refresh.md' }
 })
 
 // ── Report ─────────────────────────────────────────────────────────

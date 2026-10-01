@@ -1,9 +1,10 @@
 // NERV's own mode vocabulary. Orchestrators translate these into their native commands.
-export const MODES = ['plan', 'implement', 'pull', 'rebase', 'ship'] as const
+// Lifecycle order: create the ticket, take it in, plan, build, keep the branch fresh, ship.
+export const MODES = ['ticket', 'intake', 'plan', 'implement', 'refresh', 'ship'] as const
 export type Mode = typeof MODES[number]
 
 // Modes that act on the branch rather than a task description.
-export const TASKLESS_MODES: readonly Mode[] = ['rebase', 'ship']
+export const TASKLESS_MODES: readonly Mode[] = ['refresh', 'ship']
 
 export function isMode(value: string): value is Mode {
   return (MODES as readonly string[]).includes(value)

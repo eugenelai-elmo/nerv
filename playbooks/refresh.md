@@ -1,6 +1,6 @@
-# NERV `rebase` playbook
+# NERV `refresh` playbook
 
-Bring the current branch up to date with its base, keep the slice's intent through any conflict, and prove nothing regressed. Repo-agnostic: every repo-specific value comes from the **profile** NERV prints alongside this playbook (`nerv … dev rebase`). Never substitute a guessed value for a profile field.
+Bring the current branch up to date with its base (by rebasing onto it), keep the slice's intent through any conflict, and prove nothing regressed. Repo-agnostic: every repo-specific value comes from the **profile** NERV prints alongside this playbook (`nerv dev <target> refresh`). Never substitute a guessed value for a profile field.
 
 Derived from elmo-application's `/sync`, with flowmo's base-branch and precondition rules.
 

@@ -216,6 +216,6 @@ export interface ProviderConfig {
   dev?: {
     chain: string[]
     targets?: Record<string, string>
-    repos?: Record<string, { rebase?: RebaseOverrides }>
+    repos?: Record<string, { refresh?: RebaseOverrides }>
   }
 }

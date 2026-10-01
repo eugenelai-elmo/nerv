@@ -3,7 +3,7 @@ import type { Mode, TaskInput } from './modes.js'
 import { loadConfig } from './resolve-provider.js'
 import { loadOrchestrator } from './orchestrator-registry.js'
 
-export const DEFAULT_CHAIN = ['nerv', 'flowmo', 'kernel', 'direct']
+export const DEFAULT_CHAIN = ['nerv', 'sprintmo', 'flowmo', 'kernel', 'direct']
 
 export interface Skip {
   name: string

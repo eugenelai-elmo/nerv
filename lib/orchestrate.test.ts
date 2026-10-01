@@ -15,6 +15,7 @@ let flowmo: Orchestrator
 let kernel: Orchestrator
 let direct: Orchestrator
 let nerv: Orchestrator
+let sprintmo: Orchestrator
 let pick: typeof import('./orchestrate.js').pick
 let NoOrchestrator: typeof import('./orchestrate.js').NoOrchestrator
 
@@ -40,6 +41,7 @@ before(async () => {
   kernel = (await import('../orchestrators/kernel.js')).default
   direct = (await import('../orchestrators/direct.js')).default
   nerv = (await import('../orchestrators/nerv.js')).default
+  sprintmo = (await import('../orchestrators/sprintmo.js')).default
   ;({ pick, NoOrchestrator } = await import('./orchestrate.js'))
 })
 
@@ -64,8 +66,8 @@ test('ticket + plan goes to flowmo with the ticket, not the text', async () => {
   assert.deepEqual(r.skipped, [])
 })
 
-test('pull maps to flowmo sync', async () => {
-  const r = await pick([flowmo, kernel, direct], 'pull', parseTaskInput('HPI-1915'), kernelRepo)
+test('intake maps to flowmo sync', async () => {
+  const r = await pick([flowmo, kernel, direct], 'intake', parseTaskInput('HPI-1915'), kernelRepo)
   assert.equal(r.resolution.kind === 'invoke' && r.resolution.invocation, '/flowmo sync HPI-1915')
 })
 
@@ -76,16 +78,16 @@ test('free text skips flowmo and lands on the repo kernel command', async () => 
   assert.deepEqual(r.skipped, [{ name: 'flowmo', reason: 'needs a ticket key' }])
 })
 
-test('rebase is NERV-owned even when the repo ships its own /sync', async () => {
-  const r = await pick([nerv, flowmo, kernel, direct], 'rebase', parseTaskInput(''), kernelRepo)
+test('refresh is NERV-owned even when the repo ships its own /sync', async () => {
+  const r = await pick([nerv, flowmo, kernel, direct], 'refresh', parseTaskInput(''), kernelRepo)
   assert.equal(r.orchestrator.name, 'nerv')
   assert.equal(r.resolution.kind, 'playbook')
-  assert.ok(r.resolution.kind === 'playbook' && r.resolution.playbook.endsWith('playbooks/rebase.md'))
-  assert.equal(await kernel.supports('rebase', parseTaskInput(''), kernelRepo), 'kernel-repo has no rebase command')
+  assert.ok(r.resolution.kind === 'playbook' && r.resolution.playbook.endsWith('playbooks/refresh.md'))
+  assert.equal(await kernel.supports('refresh', parseTaskInput(''), kernelRepo), 'kernel-repo has no refresh command')
 })
 
 test('nerv declines every mode it does not own', async () => {
-  for (const m of ['plan', 'implement', 'pull', 'ship'] as const) {
+  for (const m of ['ticket', 'plan', 'implement', 'intake', 'ship'] as const) {
     assert.notEqual(await nerv.supports(m, parseTaskInput('HPI-1'), kernelRepo), true, m)
   }
 })
@@ -103,7 +105,7 @@ test('repo without a matching command falls back to its skills as context', asyn
 })
 
 test('mode the repo cannot serve falls through to direct with reasons', async () => {
-  const r = await pick([flowmo, kernel, direct], 'pull', parseTaskInput('refresh it'), skillsOnlyRepo)
+  const r = await pick([flowmo, kernel, direct], 'intake', parseTaskInput('refresh it'), skillsOnlyRepo)
   assert.equal(r.orchestrator.name, 'direct')
   assert.deepEqual(r.skipped.map(s => s.name), ['flowmo', 'kernel'])
 })
@@ -118,9 +120,25 @@ test('chain order is respected when swapped', async () => {
 })
 
 test('empty-handed chain throws with every reason', async () => {
-  await assert.rejects(pick([flowmo, kernel], 'rebase', parseTaskInput(''), bareRepo), (err: unknown) => {
+  await assert.rejects(pick([flowmo, kernel], 'refresh', parseTaskInput(''), bareRepo), (err: unknown) => {
     assert.ok(err instanceof NoOrchestrator)
     assert.deepEqual(err.skipped.map(s => s.name), ['flowmo', 'kernel'])
     return true
   })
+})
+
+test('ticket creates via sprintmo with the repo as routing context', async () => {
+  const r = await pick([nerv, sprintmo, flowmo, kernel, direct], 'ticket', parseTaskInput('add a dark mode toggle'), kernelRepo)
+  assert.equal(r.orchestrator.name, 'sprintmo')
+  assert.deepEqual(r.resolution, { kind: 'invoke', invocation: '/sprintmo:ticket add a dark mode toggle (repo: kernel-repo)' })
+})
+
+test('ticket without a description is declined by sprintmo', async () => {
+  assert.equal(await sprintmo.supports('ticket', parseTaskInput(''), kernelRepo), 'needs a description of the work')
+})
+
+test('sprintmo declines every mode except ticket', async () => {
+  for (const m of ['intake', 'plan', 'implement', 'refresh', 'ship'] as const) {
+    assert.notEqual(await sprintmo.supports(m, parseTaskInput('HPI-1 x'), kernelRepo), true, m)
+  }
 })

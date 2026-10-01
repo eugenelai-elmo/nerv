@@ -10,7 +10,7 @@ import { readRepoCapabilities } from '../lib/repo-capabilities.js'
 const PLAYBOOKS = join(dirname(fileURLToPath(import.meta.url)), '..', 'playbooks')
 
 // Modes NERV implements itself, identically across repos. Repo commands for these are not used.
-const OWNED: readonly Mode[] = ['rebase']
+const OWNED: readonly Mode[] = ['refresh']
 
 const orchestrator: Orchestrator = {
   name: 'nerv',
@@ -23,10 +23,10 @@ const orchestrator: Orchestrator = {
     const config = await loadConfig()
     const profile = await buildRebaseProfile(repo, {
       kind: await flowmoRepoKind(repo.name),
-      overrides: config.dev?.repos?.[repo.name]?.rebase,
+      overrides: config.dev?.repos?.[repo.name]?.refresh,
     })
     const skills = (await readRepoCapabilities(repo.path)).skills.filter(s => /git|workflow/i.test(s.name))
-    return { kind: 'playbook', playbook: join(PLAYBOOKS, 'rebase.md'), profile, skills: skills.length ? skills : undefined }
+    return { kind: 'playbook', playbook: join(PLAYBOOKS, 'refresh.md'), profile, skills: skills.length ? skills : undefined }
   },
 }
 

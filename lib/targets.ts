@@ -2,8 +2,8 @@ import { stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { loadConfig } from './resolve-provider.js'
-import { flowmoRepoNames, flowmoRepoPath } from './flowmo-registry.js'
-import { resolveRepoContext } from './repo-context.js'
+import { flowmoRepoNames, flowmoRepoPath, flowmoRepoNameForPath } from './flowmo-registry.js'
+import { resolveRepoContext, mainCheckoutPath } from './repo-context.js'
 import type { RepoContext } from './types.js'
 
 export interface TargetInfo {
@@ -66,14 +66,17 @@ export async function resolveTarget(name: string, repoOverride?: string): Promis
     const known = (await listTargets()).map(t => t.name)
     throw new TargetError(`Unknown target "${name}". Available: ${[...new Set(known)].join(', ')}`)
   }
-  const base = await resolveRepoContext(path)
-  if (!base) throw new TargetError(`Target "${name}" (${path}) is not a git repository`)
+  const found = await resolveRepoContext(path)
+  if (!found) throw new TargetError(`Target "${name}" (${path}) is not a git repository`)
+  // Prefer flowmo's registry key, so a renamed folder keeps its identity for flowmo routing.
+  const base = { name: (await flowmoRepoNameForPath(found.path)) ?? found.name, path: found.path }
   if (!repoOverride) return base
 
   const override = await resolveRepoContext(expandHome(repoOverride))
   if (!override) throw new TargetError(`--repo ${repoOverride} is not a git repository`)
-  if (override.name !== base.name) {
+  // Same repo = same main checkout; folder names can differ (renames, worktree dirs).
+  if ((await mainCheckoutPath(override.path)) !== (await mainCheckoutPath(base.path))) {
     throw new TargetError(`--repo ${repoOverride} is a checkout of "${override.name}", not target "${name}" (${base.name})`)
   }
-  return override
+  return { name: base.name, path: override.path }
 }

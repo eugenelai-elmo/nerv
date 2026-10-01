@@ -67,3 +67,9 @@ export async function flowmoRepoPath(name: string): Promise<string | undefined> 
 export async function flowmoRepoNames(): Promise<string[]> {
   return [...(await load()).keys()].sort()
 }
+
+// Registry key for a checkout path — so a renamed clone (elmo-frontend) still maps to its key (elmo-application).
+export async function flowmoRepoNameForPath(path: string): Promise<string | undefined> {
+  for (const [name, entry] of await load()) if (entry.path === path) return name
+  return undefined
+}

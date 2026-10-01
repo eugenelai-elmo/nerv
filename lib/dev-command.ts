@@ -26,9 +26,19 @@ export interface RunDevOptions {
   usage?: string
 }
 
+const MODE_OWNERS = ['nerv', 'sprintmo']
+
 const dim = (s: string) => `\x1b[90m${s}\x1b[0m`
 
 export class DevArgsError extends Error {}
+
+// Old or tool-native words that would otherwise be read as an implement task.
+const RETIRED_MODES: Record<string, string> = {
+  rebase: 'refresh',
+  pull: 'intake (refresh a ticket from Jira) or refresh (update the branch)',
+  sync: 'refresh (update the branch) or intake (refresh a ticket from Jira)',
+  issue: 'plan',
+}
 
 const VALUE_FLAGS = ['repo', 'via', 'chain'] as const
 const BOOL_FLAGS = ['json'] as const
@@ -62,6 +72,8 @@ export function parseDevArgs(argv: string[], fixedTarget?: string): DevArgs {
   if (!fixedTarget && target && isMode(target)) {
     throw new DevArgsError(`Missing target — e.g. nerv dev mobile ${target}`)
   }
+  const retired = positionals[0] ? RETIRED_MODES[positionals[0]] : undefined
+  if (retired) throw new DevArgsError(`"${positionals[0]}" is not a NERV mode — use ${retired}`)
   const mode = positionals[0] && isMode(positionals[0]) ? positionals[0] : null
   const task = (mode ? positionals.slice(1) : positionals).join(' ')
   return { target, task, mode, via: values.via, chain: values.chain, repo: values.repo, json }
@@ -73,11 +85,12 @@ async function printDevHelp(usage: string, fixedTarget: string | undefined, chai
   console.log(`\x1b[1m${usage}\x1b[0m — orchestrated development, issued from the NERV seat`)
   console.log('')
   console.log('Usage:')
+  console.log(`  ${usage} ${t}ticket <text>           create a Jira ticket from a description (sprintmo)`)
+  console.log(`  ${usage} ${t}intake <TICKET>         refresh an existing ticket from Jira only`)
   console.log(`  ${usage} ${t}<task>                  implement (or plan, if phrased as a question)`)
   console.log(`  ${usage} ${t}plan <task>             plan only, no code`)
   console.log(`  ${usage} ${t}implement <task>        full run including code`)
-  console.log(`  ${usage} ${t}pull <TICKET>           refresh the ticket from Jira only`)
-  console.log(`  ${usage} ${t}rebase                  bring the branch up to date`)
+  console.log(`  ${usage} ${t}refresh                 bring the branch up to date with its base (rebase)`)
   console.log(`  ${usage} ${t}ship                    open the PR`)
   console.log('')
   console.log('Options:')
@@ -118,8 +131,8 @@ function renderDev(p: {
   if (input.ticket) console.log(`  Ticket:  ${v(input.ticket)}`)
   console.log(`  Mode:    ${mode} ${dim(modeLabel)}`)
   console.log(`  Via:     \x1b[36m${v(picked.orchestrator.name)}\x1b[0m ${dim(chainLabel)}`)
-  // nerv only claims the modes it owns; its skip on every other mode is noise
-  for (const s of picked.skipped.filter(s => s.name !== 'nerv')) console.log(`  ${dim(`Skipped: ${v(s.name)} — ${v(s.reason)}`)}`)
+  // nerv/sprintmo only claim the modes they own; their skips on every other mode are noise
+  for (const s of picked.skipped.filter(s => !MODE_OWNERS.includes(s.name))) console.log(`  ${dim(`Skipped: ${v(s.name)} — ${v(s.reason)}`)}`)
   console.log(`  Repo:    ${v(repo.path)}`)
   console.log('')
 

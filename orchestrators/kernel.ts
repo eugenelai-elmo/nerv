@@ -3,12 +3,13 @@ import type { Mode } from '../lib/modes.js'
 import { readRepoCapabilities } from '../lib/repo-capabilities.js'
 
 // The repo's own workflow: its .claude/commands for each mode, else its skills as context.
-// rebase is NERV-owned (orchestrators/nerv.ts) so it behaves the same in every repo.
+// refresh is NERV-owned (orchestrators/nerv.ts) so it behaves the same in every repo; ticket is sprintmo's.
 const CANDIDATES: Record<Mode, string[]> = {
+  ticket: [],
+  intake: [],
   plan: ['issue', 'plan'],
   implement: ['implement'],
-  pull: [],
-  rebase: [],
+  refresh: [],
   ship: ['ship'],
 }
 

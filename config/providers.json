@@ -38,21 +38,16 @@
     "config": {}
   },
   "dev": {
-    "chain": [
-      "nerv",
-      "flowmo",
-      "kernel",
-      "direct"
-    ],
+    "chain": ["nerv", "sprintmo", "flowmo", "kernel", "direct"],
     "targets": {
       "mobile": "~/Projects/elmo-learning-mobile-app",
-      "frontend": "~/Projects/elmo-application",
+      "frontend": "~/Projects/elmo-frontend",
       "flowmo": "~/Projects/flowmo"
     },
-    "note": "Tried in order; the first orchestrator that supports the mode + input wins. 'nerv' only claims the modes it owns (rebase), so it sits first. Reorder to swap. One-off: --chain a,b or --via x.",
+    "note": "Tried in order; the first orchestrator that supports the mode + input wins. 'nerv' (refresh) and 'sprintmo' (ticket) only claim the modes they own, so they sit first. Reorder to swap. One-off: --chain a,b or --via x.",
     "repos": {
       "elmo-application": {
-        "rebase": {
+        "refresh": {
           "verify": [
             "pnpm nx run platform:check:types",
             "pnpm nx run platform:lint",

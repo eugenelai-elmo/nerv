@@ -18,8 +18,15 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
 export async function resolveRepoContext(path: string): Promise<RepoContext | null> {
   const top = await git(path, ['rev-parse', '--show-toplevel'])
   if (!top) return null
+  const main = await mainCheckoutPath(top)
+  return { name: basename(main ?? top), path: top }
+}
+
+// The main checkout a worktree belongs to (itself for a main checkout); null for bare/odd layouts.
+export async function mainCheckoutPath(path: string): Promise<string | null> {
+  const top = await git(path, ['rev-parse', '--show-toplevel'])
+  if (!top) return null
   const common = await git(top, ['rev-parse', '--git-common-dir'])
   const commonAbs = common ? (isAbsolute(common) ? common : resolve(top, common)) : null
-  const name = commonAbs && basename(commonAbs) === '.git' ? basename(dirname(commonAbs)) : basename(top)
-  return { name, path: top }
+  return commonAbs && basename(commonAbs) === '.git' ? dirname(commonAbs) : top
 }

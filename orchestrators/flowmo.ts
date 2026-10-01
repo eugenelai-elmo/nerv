@@ -5,7 +5,7 @@ import { isFlowmoRepo } from '../lib/flowmo-registry.js'
 const COMMAND: Partial<Record<Mode, string>> = {
   plan: 'plan',
   implement: 'implement',
-  pull: 'sync',
+  intake: 'sync',
 }
 
 const orchestrator: Orchestrator = {

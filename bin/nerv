@@ -17,7 +17,7 @@ usage() {
 nerv — NERV command seat
 
 Commands:
-  dev <target> [plan|implement|pull|rebase|ship] <task>
+  dev <target> [ticket|intake|plan|implement|refresh|ship] <task>
                                   Orchestrated development — name the target (mobile, frontend, flowmo, …)
   mobile [check|start|stop|dev]   Mobile dev environment & orchestrated development
   loadout [search|sources|local]  Skill discovery

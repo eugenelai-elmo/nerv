@@ -34,15 +34,19 @@ before(async () => {
     beta: { relativePath: '../beta', kind: 'backend' },
     delta: { relativePath: '../dev-stack/apps/delta', kind: 'frontend' },
     epsilon: { relativePath: '../not-here' },
+    'renamed-key': { relativePath: '../dev-stack/old-name', kind: 'frontend' },
     gone: { relativePath: '../not-cloned' },
   }))
   process.env.FLOWMO_RELATED_REPOS = join(tmp, 'flowmo', '.claude', 'related-repos.json')
   // per-machine override: moved clone (absolute), relative override, and an unknown key that must be ignored
   await repo('elsewhere/delta')
+  const renamed = await repo('new-folder-name')
+  g(renamed, 'worktree', 'add', '-q', join(tmp, 'new-folder-name-LMS-9'), '-b', 'feature/LMS-9')
   await writeFile(join(tmp, 'local.json'), JSON.stringify({
     '$note': 'ignored',
     delta: join(tmp, 'elsewhere', 'delta'),
     epsilon: '../beta',
+    'renamed-key': join(tmp, 'new-folder-name'),
     ghost: join(tmp, 'beta'),
   }))
   process.env.FLOWMO_RELATED_REPOS_LOCAL = join(tmp, 'local.json')
@@ -93,4 +97,9 @@ test('related-repos.local.json overrides registry paths, absolute or relative to
 
 test('override keys that are not in the registry are ignored', async () => {
   assert.equal(await targets.resolveTargetPath('ghost'), null)
+})
+
+test('a renamed clone keeps its flowmo registry name, and its worktrees still match', async () => {
+  assert.deepEqual(await targets.resolveTarget('renamed-key'), { name: 'renamed-key', path: join(tmp, 'new-folder-name') })
+  assert.deepEqual(await targets.resolveTarget('renamed-key', join(tmp, 'new-folder-name-LMS-9')), { name: 'renamed-key', path: join(tmp, 'new-folder-name-LMS-9') })
 })

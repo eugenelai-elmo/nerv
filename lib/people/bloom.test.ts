@@ -141,3 +141,32 @@ test('network error → unavailable', async () => {
   assert.equal(r.status, 'unavailable')
   assert.match(r.hint!, /fetch failed/)
 })
+
+test('a failing notes endpoint degrades to no notes, not a failed appraisal', async () => {
+  const { fetchImpl } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/sections/11/items/101/notes`]: () => jsonRes({}, 404),
+  })
+  const r = await fetchAppraisal(person, opts(fetchImpl))
+  assert.equal(r.status, 'ok')
+  assert.deepEqual(r.data!.sections[0].items[0].notes, [])
+})
+
+test('items without a numeric id skip the notes call', async () => {
+  const { fetchImpl, calls } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/development-sections/13`]: () => jsonRes({ title: 'IDP', items: [{ title: 'No id' }] }),
+  })
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'idp' })
+  assert.equal(r.status, 'ok')
+  assert.ok(!calls.some(u => u.includes('NaN')))
+})
+
+test('a hung request times out as unavailable', async () => {
+  const fetchImpl: FetchLike = (_url, init) => new Promise((_, reject) => {
+    init.signal?.addEventListener('abort', () => reject(init.signal!.reason))
+  })
+  // AbortSignal.timeout's timer is unref'd; keep the loop alive as a real socket would.
+  const keepAlive = setInterval(() => {}, 5)
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), timeoutMs: 20 }).finally(() => clearInterval(keepAlive))
+  assert.equal(r.status, 'unavailable')
+  assert.match(r.hint!, /timed out|abort/i)
+})

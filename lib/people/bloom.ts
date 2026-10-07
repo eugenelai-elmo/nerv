@@ -45,7 +45,7 @@ export interface Appraisal {
 
 export type FetchLike = (
   url: string,
-  init: { headers: Record<string, string>; redirect: 'manual' },
+  init: { headers: Record<string, string>; redirect: 'manual'; signal?: AbortSignal },
 ) => Promise<{ status: number; ok: boolean; headers: { get(name: string): string | null }; json(): Promise<unknown> }>
 
 export const LOGIN_HINT =
@@ -119,7 +119,7 @@ function mapItem(raw: unknown): Omit<AppraisalItem, 'notes'> {
 
 export async function fetchAppraisal(
   person: Person,
-  opts: { baseUrl: string | null; session: string | null; fy: string; only?: SectionKey; fetchImpl?: FetchLike },
+  opts: { baseUrl: string | null; session: string | null; fy: string; only?: SectionKey; fetchImpl?: FetchLike; timeoutMs?: number },
 ): Promise<SourceResult<Appraisal>> {
   const performanceId = person.bloom[opts.fy]
   if (!performanceId) {
@@ -138,11 +138,23 @@ export async function fetchAppraisal(
   const headers = { Cookie: `PHPSESSID=${opts.session}`, Accept: 'application/json' }
 
   async function get(path: string): Promise<unknown> {
-    const res = await fetchImpl(`${root}${path}`, { headers, redirect: 'manual' })
+    const signal = AbortSignal.timeout(opts.timeoutMs ?? 15_000)
+    const res = await fetchImpl(`${root}${path}`, { headers, redirect: 'manual', signal })
     if (res.status === 401 || res.status === 403 || (res.status >= 300 && res.status < 400)) throw new AuthExpired()
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     if (!(res.headers.get('content-type') ?? '').includes('json')) throw new AuthExpired()
     return unwrap(await res.json())
+  }
+
+  // Notes are supplementary: one failing or id-less item must not sink the appraisal.
+  async function fetchNotes(sectionId: number, itemId: number): Promise<string[]> {
+    if (!Number.isFinite(itemId)) return []
+    try {
+      return list(await get(`/sections/${sectionId}/items/${itemId}/notes`)).map(textOf)
+    } catch (e) {
+      if (e instanceof AuthExpired) throw e
+      return []
+    }
   }
 
   try {
@@ -168,7 +180,7 @@ export async function fetchAppraisal(
       const baseItems = list(d.items).map(mapItem)
       const items = await Promise.all(baseItems.map(async item => ({
         ...item,
-        notes: list(await get(`/sections/${sectionId}/items/${item.id}/notes`)).map(textOf),
+        notes: await fetchNotes(sectionId, item.id),
       })))
       const extra = Object.entries(d)
         .filter(([k, v]) => !['title', 'description', 'status', 'items', 'id', 'weight', 'performance', 'alerts'].includes(k) && str(v))
@@ -191,6 +203,7 @@ export async function fetchAppraisal(
     }
   } catch (e) {
     if (e instanceof AuthExpired) return { status: 'auth_expired', hint: LOGIN_HINT }
-    return { status: 'unavailable', hint: `Bloom request failed (${(e as Error).message}). Check network/VPN and retry.` }
+    const reason = (e as Error).name === 'TimeoutError' ? 'timed out' : (e as Error).message
+    return { status: 'unavailable', hint: `Bloom request failed (${reason}). Check network/VPN and retry.` }
   }
 }

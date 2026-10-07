@@ -103,3 +103,13 @@ test('resolve: unknown returns whole roster as candidates', () => {
   assert.equal(r.kind, 'unknown')
   assert.equal(r.kind === 'unknown' && r.candidates.length, 3)
 })
+
+test('resolve: multi-word query matches name tokens by prefix', () => {
+  const r = resolvePerson(roster, 'alex ex')
+  assert.equal(r.kind === 'found' && r.person.id, 'alex')
+})
+
+test('resolve: multi-word query narrows an ambiguous first word', () => {
+  const r = resolvePerson(roster, 'sa te')
+  assert.equal(r.kind === 'found' && r.person.id, 'sasha')
+})

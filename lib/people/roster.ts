@@ -127,9 +127,13 @@ export function resolvePerson(roster: Roster, query: string): Resolution {
   const exact = roster.people.filter(p =>
     p.id === q || p.name.toLowerCase() === q || p.aliases.some(a => a.toLowerCase() === q))
   if (exact.length === 1) return { kind: 'found', person: exact[0] }
-  const partial = q
-    ? roster.people.filter(p =>
-        [p.id, ...p.aliases, ...p.name.toLowerCase().split(/\s+/)].some(t => t.toLowerCase().startsWith(q)))
+  // Every query word must prefix-match one of the person's id, aliases, or name words.
+  const words = q.split(/\s+/).filter(Boolean)
+  const partial = words.length
+    ? roster.people.filter(p => {
+        const tokens = [p.id, ...p.aliases, ...p.name.split(/\s+/)].map(t => t.toLowerCase())
+        return words.every(w => tokens.some(t => t.startsWith(w)))
+      })
     : []
   if (partial.length === 1) return { kind: 'found', person: partial[0] }
   if (partial.length > 1) return { kind: 'ambiguous', candidates: partial }

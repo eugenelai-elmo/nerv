@@ -201,3 +201,9 @@ test('privacy: session never appears in any output across failure modes', async 
     }
   }
 })
+
+test('multi-word <who> is joined, not truncated', async () => {
+  const t = io()
+  assert.equal(await main(['resolve', 'sa', 'te', '--json'], t.value), 0)
+  assert.equal(JSON.parse(t.out.join('')).person.id, 'sasha')
+})

@@ -105,7 +105,7 @@ export async function main(argv: string[], io: CliIO): Promise<number> {
     return 0
   }
 
-  const query = positional[0]
+  const query = positional.join(' ')
   if (!query) { io.stderr(`Missing <who>.\n\n${HELP[verb]}`); return 1 }
 
   let section: (typeof SECTIONS)[number] | undefined

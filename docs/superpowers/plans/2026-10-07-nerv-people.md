@@ -1746,7 +1746,7 @@ ln -sfn "$PWD/skills/people" ~/.claude/skills/people
 
 - [ ] **Step 4: Live login** — hand to the user:
 
-> Run `! nerv people login` and paste a fresh PHPSESSID from Chrome DevTools → Application → Cookies → elmotms host.
+> Run `! nerv people login` and paste a fresh PHPSESSID from Chrome DevTools → Application → Cookies → the Bloom host.
 
 (Use `./bin/nerv` from the worktree if `nerv` on PATH resolves to the main checkout.)
 

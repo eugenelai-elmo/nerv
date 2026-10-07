@@ -22,6 +22,8 @@ Commands:
   decide [list|<name>]            On-demand decision scoring via Jev/Laya
   trace [show|tail|stats|clear]   Runtime trace viewer
   check [--verbose]               Stack health check
+  people [ls|resolve|appraisal|login]
+                                  Reports & team from one roster; Bloom appraisals
 
 Run 'nerv <command>' with no subcommand for help.
 EOF
@@ -36,6 +38,7 @@ case "$cmd" in
   decide)   exec npx tsx commands/decide.ts "$@" ;;
   trace)    exec npx tsx commands/trace.ts "$@" ;;
   check)    exec npx tsx checks/check-stack.ts "$@" ;;
+  people)   exec npx tsx commands/people.ts "$@" ;;
   help|-h|--help)
     usage
     ;;

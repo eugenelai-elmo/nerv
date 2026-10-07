@@ -251,13 +251,25 @@ These skills are local (gitignored `nerv/.claude/skills/` and the vault), so mig
 
 **Manual acceptance (phase 1):** `nerv people appraisal <report>` against live Bloom matches the browser view.
 
-## 11. Phases
+## 11. Scope — v1 (YAGNI)
 
-1. **Roster + Bloom + CLI core** — `ls`, `resolve`, `set`, `appraisal`, `login`, `logout`, `doctor`. Covers the original PRD.
-2. **GitHub radar adapter** — `radar`, and `show` combining both.
-3. **`/people` skill + consumer migration** — retire inline rosters, redirect `dev-radar`.
+The driving use case: "Claude, bring up <report>'s profile." v1 builds only what that needs.
 
-Each phase ships independently and is useful on its own.
+**In v1:**
+
+- `config/people.local.json` + `config/people.example.json` + validation
+- `nerv people` / `ls`, `resolve`, `appraisal <who> [--section] [--fy] [--json]`, `login`
+- Bloom adapter, credentials (Keychain + env override), FY helper, renderer
+- `/people` skill: resolve → `appraisal --json` → GitHub signals via the existing `/dev-radar` procedure → Jira via MCP → profile brief, with per-source status
+- Tests: roster, fy, bloom adapter, cli, privacy
+
+**Deferred until a concrete need appears** (design above still applies):
+
+- `set`, `logout`, `doctor`, `show`, `radar`, `--all`, `--squad`
+- Porting radar maths into a TS GitHub adapter
+- Migrating `team-stats` / `team-goals` / `goal-alerts` / `dev-radar` / `inbox` off inline rosters
+
+Until `set` exists, the roster is edited by hand; validation on load keeps that safe.
 
 ## 12. Open items
 

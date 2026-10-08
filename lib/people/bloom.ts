@@ -58,6 +58,12 @@ const PREFIX: Record<string, string> = {
   recommendation: 'recommendation-sections',
 }
 
+// Section-level fields worth showing; everything else (urls, dates, metadata) is noise.
+const RATING_FIELDS = [
+  'managerRating', 'managerRatingForLabel', 'employeeRating', 'employeeRatingForLabel',
+  'manager360Rating', 'employee360Rating', 'peer360Rating', 'reviewerScoredBy',
+]
+
 class AuthExpired extends Error {}
 
 type Obj = Record<string, unknown>
@@ -78,6 +84,7 @@ function nameOf(v: unknown): string | null {
 // Bloom's nested shapes vary; pull the first human-readable field.
 function textOf(v: unknown): string {
   if (typeof v === 'string') return v
+  if (Array.isArray(v)) return v.map(textOf).join('\n')
   if (isObj(v)) {
     for (const k of ['value', 'text', 'content', 'comment', 'title', 'description', 'name']) {
       const s = str(v[k])
@@ -108,12 +115,12 @@ function mapItem(raw: unknown): Omit<AppraisalItem, 'notes'> {
     id: Number(o.id),
     title: str(o.title) ?? '(untitled)',
     description: str(o.description),
-    label: str(o.label) ?? (isObj(o.label) ? str(o.label.name) : null),
+    label: str(o.label) ?? (isObj(o.label) ? str(o.label.name) ?? str(o.label.title) : null),
     responses: (Array.isArray(o.responses) ? o.responses : []).map(r => {
       const ro = isObj(r) ? r : {}
       return { author: nameOf(ro.author), reviewer: nameOf(ro.reviewer), value: textOf(ro.value ?? '') }
     }),
-    actions: (Array.isArray(o.actions) ? o.actions : []).map(textOf),
+    actions: (Array.isArray(o.actions) ? o.actions : []).map(a => `${isObj(a) && a.checked === true ? '✓ ' : ''}${textOf(a)}`),
   }
 }
 
@@ -182,9 +189,9 @@ export async function fetchAppraisal(
         ...item,
         notes: await fetchNotes(sectionId, item.id),
       })))
-      const extra = Object.entries(d)
-        .filter(([k, v]) => !['title', 'description', 'status', 'items', 'id', 'weight', 'performance', 'alerts'].includes(k) && str(v))
-        .map(([k, v]) => `${k}: ${v}`)
+      const extra = RATING_FIELDS
+        .filter(k => typeof d[k] === 'number' || str(d[k]))
+        .map(k => `${k}: ${d[k]}`)
       return { key: classify(type, title), sectionId, type, title, status: str(d.status), items, extra }
     }))
 
@@ -196,7 +203,7 @@ export async function fetchAppraisal(
         performanceId,
         title: str(overview.title) ?? `${opts.fy} appraisal`,
         employee: nameOf(overview.employee),
-        progressStatus: str(overview.progressStatus) ?? (isObj(overview.progressStatus) ? str(overview.progressStatus.name) : null),
+        progressStatus: str(overview.progressStatus) ?? (isObj(overview.progressStatus) ? str(overview.progressStatus.text) ?? str(overview.progressStatus.name) : null),
         period: { start: str(overview.startDate), end: str(overview.endDate) },
         sections: filtered,
       },

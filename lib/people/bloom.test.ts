@@ -51,11 +51,11 @@ test('maps all five sections and overview', async () => {
   assert.deepEqual(a.period, { start: '2026-07-01', end: '2027-06-30' })
   assert.deepEqual(a.sections.map(s => s.key), ['goals', 'career', 'idp', 'final', 'recognition'])
   const goals = a.sections[0]
-  assert.equal(goals.items[0].responses[0].value, 'Ship the theming engine')
-  assert.equal(goals.items[0].responses[0].author, 'Alex Example')
+  assert.equal(goals.items[0].responses[0].value, 'Ship the theming engine\nMentor a junior')
+  assert.equal(goals.items[0].responses[0].author, 'employee')
   assert.deepEqual(goals.items[0].notes, ['Good progress in Q1'])
-  assert.equal(a.sections[1].items[1].responses[0].author, 'Alex Example') // string author
-  assert.deepEqual(a.sections[2].items[0].actions, ['Run an arch guild session'])
+  assert.equal(a.sections[1].items[1].responses[0].value, 'Debugging')
+  assert.deepEqual(a.sections[2].items[0].actions, ['✓ Run an arch guild session', 'Pair on a design doc'])
   assert.equal(a.sections[2].items[0].label, 'Technical')
   assert.ok(cookies.every(c => c === `PHPSESSID=${SECRET}`))
 })
@@ -169,4 +169,11 @@ test('a hung request times out as unavailable', async () => {
   const r = await fetchAppraisal(person, { ...opts(fetchImpl), timeoutMs: 20 }).finally(() => clearInterval(keepAlive))
   assert.equal(r.status, 'unavailable')
   assert.match(r.hint!, /timed out|abort/i)
+})
+
+test('extra shows rating fields only, not urls/dates/type', async () => {
+  const { fetchImpl } = routes()
+  const r = await fetchAppraisal(person, opts(fetchImpl))
+  assert.deepEqual(r.data!.sections[0].extra, [])
+  assert.deepEqual(r.data!.sections.find(s => s.key === 'final')!.extra, ['managerRating: 3', 'managerRatingForLabel: Meets expectations'])
 })

@@ -207,3 +207,16 @@ test('HTML inside nested objects (actions, notes) is converted', async () => {
   const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'idp' })
   assert.deepEqual(r.data!.sections[0].items[0].actions, ['Measure it'])
 })
+
+test('recognition items become a dated message attributed to the giver', async () => {
+  const { fetchImpl } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/recommendation-sections/15`]: () => jsonRes({ title: 'Recognition',
+      items: [{ id: 501, title: null, type: 'kudos', description: '<p>Great release work</p>', createdDateTime: '2026-09-12T10:00:00+10:00',
+        giver: { firstName: 'Morgan', lastName: 'Manager' }, employee: { firstName: 'Alex', lastName: 'Example' } }] }),
+  })
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'recognition' })
+  const item = r.data!.sections[0].items[0]
+  assert.equal(item.title, 'Recognition — 2026-09-12')
+  assert.deepEqual(item.responses, [{ author: 'Morgan Manager', reviewer: null, value: 'Great release work' }])
+  assert.equal(item.description, null)
+})

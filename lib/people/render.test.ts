@@ -75,3 +75,16 @@ test('renderAppraisal hides template guidance on question items but keeps IDP de
   assert.doesNotMatch(out, /TEMPLATE GUIDANCE/)
   assert.match(out, /Lead a review/)
 })
+
+test('IDP item with a description but no actions is not "not filled in"', () => {
+  const out = renderAppraisal(alex, { status: 'ok', data: { ...appraisal, sections: [
+    { key: 'idp', sectionId: 13, type: 'development', title: 'IDP', status: null, extra: [],
+      items: [{ id: 1, title: 'Plan', description: 'Capability: X', label: null, actions: [], notes: [], responses: [] }] }] } })
+  assert.match(out, /Capability: X/)
+  assert.doesNotMatch(out, /not filled in/)
+})
+
+test('Bloom section status not_applicable is not shown', () => {
+  const out = renderAppraisal(alex, { status: 'ok', data: { ...appraisal, sections: appraisal.sections.map(s => ({ ...s, status: 'not_applicable' })) } })
+  assert.doesNotMatch(out, /not_applicable/)
+})

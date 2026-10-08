@@ -125,8 +125,25 @@ function classify(type: string, title: string): SectionKey {
   return 'other'
 }
 
+function personName(v: unknown): string | null {
+  if (!isObj(v)) return null
+  return nameOf(v) ?? ([str(v.firstName), str(v.lastName)].filter(Boolean).join(' ') || null)
+}
+
 function mapItem(raw: unknown): Omit<AppraisalItem, 'notes'> {
   const o = isObj(raw) ? raw : {}
+  // Recognition items carry a message from a giver rather than a title/response.
+  if (isObj(o.giver)) {
+    const date = str(o.createdDateTime)?.slice(0, 10)
+    return {
+      id: Number(o.id),
+      title: str(o.title) ?? `Recognition${date ? ` — ${date}` : ''}`,
+      description: null,
+      label: null,
+      responses: str(o.description) ? [{ author: personName(o.giver), reviewer: null, value: htmlToText(o.description as string) }] : [],
+      actions: [],
+    }
+  }
   return {
     id: Number(o.id),
     title: str(o.title) ?? '(untitled)',

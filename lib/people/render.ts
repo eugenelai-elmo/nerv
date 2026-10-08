@@ -22,7 +22,7 @@ export function renderRoster(roster: Roster): string {
 function renderItem(item: AppraisalItem, showDescription: boolean): string[] {
   const out = [`**${item.title}**${item.label ? ` _[${item.label}]_` : ''}`]
   if (showDescription && item.description) out.push(item.description)
-  if (item.responses.length === 0 && item.actions.length === 0) out.push('_not filled in_')
+  if (item.responses.length === 0 && item.actions.length === 0 && !(showDescription && item.description)) out.push('_not filled in_')
   for (const r of item.responses) out.push(`> ${r.value.replace(/\n/g, '\n> ')}${r.author ? `\n> — ${r.author}` : ''}`)
   for (const a of item.actions) out.push(`- ${a}`)
   if (item.notes.length) out.push('', '_Notes:_', ...item.notes.map(n => `- ${n}`))
@@ -42,7 +42,9 @@ export function renderAppraisal(person: Person, result: SourceResult<Appraisal>,
   for (const s of a.sections) {
     const items = opts.notesOnly ? s.items.filter(i => i.notes.length) : s.items
     if (opts.notesOnly && items.length === 0) continue
-    out.push(`### ${s.title}${s.status ? ` (${s.status})` : ''}`, '')
+    // Bloom marks sections without their own workflow as not_applicable; that's not useful to show.
+    const status = s.status && s.status !== 'not_applicable' ? ` (${s.status})` : ''
+    out.push(`### ${s.title}${status}`, '')
     if (items.length === 0 && s.extra.length === 0) out.push('_empty_', '')
     for (const item of items) out.push(...renderItem(item, s.key === 'idp'))
     for (const e of s.extra) out.push(`- ${e}`)

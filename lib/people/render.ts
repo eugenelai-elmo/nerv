@@ -18,9 +18,10 @@ export function renderRoster(roster: Roster): string {
   return out.join('\n')
 }
 
-function renderItem(item: AppraisalItem): string[] {
+// Question-item descriptions are template guidance shared by everyone; only IDP descriptions are the person's own.
+function renderItem(item: AppraisalItem, showDescription: boolean): string[] {
   const out = [`**${item.title}**${item.label ? ` _[${item.label}]_` : ''}`]
-  if (item.description) out.push(item.description)
+  if (showDescription && item.description) out.push(item.description)
   if (item.responses.length === 0 && item.actions.length === 0) out.push('_not filled in_')
   for (const r of item.responses) out.push(`> ${r.value.replace(/\n/g, '\n> ')}${r.author ? `\n> — ${r.author}` : ''}`)
   for (const a of item.actions) out.push(`- ${a}`)
@@ -35,7 +36,7 @@ export function renderAppraisal(person: Person, result: SourceResult<Appraisal>,
   const a = result.data
   const out = [
     `## ${person.name} — ${a.fy} appraisal`,
-    `${a.progressStatus ?? 'status unknown'} · ${a.period.start ?? '?'} → ${a.period.end ?? '?'}`,
+    `${a.progressStatus ?? 'status unknown'} · ${a.period.start?.slice(0, 10) ?? '?'} → ${a.period.end?.slice(0, 10) ?? '?'}`,
     '',
   ]
   for (const s of a.sections) {
@@ -43,7 +44,7 @@ export function renderAppraisal(person: Person, result: SourceResult<Appraisal>,
     if (opts.notesOnly && items.length === 0) continue
     out.push(`### ${s.title}${s.status ? ` (${s.status})` : ''}`, '')
     if (items.length === 0 && s.extra.length === 0) out.push('_empty_', '')
-    for (const item of items) out.push(...renderItem(item))
+    for (const item of items) out.push(...renderItem(item, s.key === 'idp'))
     for (const e of s.extra) out.push(`- ${e}`)
   }
   if (opts.notesOnly && out.length === 3) out.push('_no notes_')

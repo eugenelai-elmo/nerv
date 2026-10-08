@@ -81,14 +81,30 @@ function nameOf(v: unknown): string | null {
   return str(v) ?? (isObj(v) ? str(v.fullName) ?? str(v.name) : null)
 }
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', nbsp: ' ', '#39': "'", apos: "'" }
+
+// Bloom stores responses as rich-text HTML; reduce to readable plain text.
+export function htmlToText(html: string): string {
+  if (!/<[a-z][^>]*>/i.test(html)) return html
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n- ')
+    .replace(/<\/(p|h[1-6]|ul|ol|div)>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#?\w+);/g, (m, e: string) => ENTITIES[e] ?? (e.startsWith('#') ? String.fromCharCode(Number(e.slice(1))) : m))
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 // Bloom's nested shapes vary; pull the first human-readable field.
 function textOf(v: unknown): string {
-  if (typeof v === 'string') return v
+  if (typeof v === 'string') return htmlToText(v)
   if (Array.isArray(v)) return v.map(textOf).join('\n')
   if (isObj(v)) {
     for (const k of ['value', 'text', 'content', 'comment', 'title', 'description', 'name']) {
       const s = str(v[k])
-      if (s) return s
+      if (s) return htmlToText(s)
     }
   }
   return JSON.stringify(v)
@@ -114,7 +130,7 @@ function mapItem(raw: unknown): Omit<AppraisalItem, 'notes'> {
   return {
     id: Number(o.id),
     title: str(o.title) ?? '(untitled)',
-    description: str(o.description),
+    description: str(o.description) ? htmlToText(o.description as string) : null,
     label: str(o.label) ?? (isObj(o.label) ? str(o.label.name) ?? str(o.label.title) : null),
     responses: (Array.isArray(o.responses) ? o.responses : []).map(r => {
       const ro = isObj(r) ? r : {}

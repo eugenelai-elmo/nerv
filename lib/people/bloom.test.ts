@@ -177,3 +177,33 @@ test('extra shows rating fields only, not urls/dates/type', async () => {
   assert.deepEqual(r.data!.sections[0].extra, [])
   assert.deepEqual(r.data!.sections.find(s => s.key === 'final')!.extra, ['managerRating: 3', 'managerRatingForLabel: Meets expectations'])
 })
+
+test('rich-text HTML responses are converted to plain text', async () => {
+  const html = '<p style="x"><span style="y">Five goals.</span></p><h3 dir="ltr"><strong>1. Own delivery</strong></h3>' +
+    '<ul><li class="m">Lead breakdown</li><li>Risks &amp; deps&nbsp;early</li></ul><p>Line<br>break &#39;ok&#39;</p>'
+  const { fetchImpl } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/question-sections/11`]: () => jsonRes({ ...fx.goalsSection,
+      items: [{ id: 101, title: 'Goals', responses: [{ id: 1, author: 'employee', value: [html] }] }] }),
+  })
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'goals' })
+  assert.equal(r.data!.sections[0].items[0].responses[0].value,
+    "Five goals.\n\n1. Own delivery\n\n- Lead breakdown\n- Risks & deps early\n\nLine\nbreak 'ok'")
+})
+
+test('item descriptions are converted from HTML too', async () => {
+  const { fetchImpl } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/development-sections/13`]: () => jsonRes({ title: 'IDP',
+      items: [{ id: 301, title: 'Grow', description: '<p>Lead <strong>one</strong> review</p>', actions: [] }] }),
+  })
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'idp' })
+  assert.equal(r.data!.sections[0].items[0].description, 'Lead one review')
+})
+
+test('HTML inside nested objects (actions, notes) is converted', async () => {
+  const { fetchImpl } = routes({
+    [`${BASE}/performances/${fx.PERF_ID}/development-sections/13`]: () => jsonRes({ title: 'IDP',
+      items: [{ id: 301, title: 'Grow', actions: [{ id: 1, title: '<p>Measure it<br>&nbsp;</p>', checked: false }] }] }),
+  })
+  const r = await fetchAppraisal(person, { ...opts(fetchImpl), only: 'idp' })
+  assert.deepEqual(r.data!.sections[0].items[0].actions, ['Measure it'])
+})

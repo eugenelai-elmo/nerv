@@ -61,3 +61,17 @@ test('renderAppraisal non-ok shows status and hint', () => {
   assert.match(out, /auth_expired/)
   assert.match(out, /nerv people login/)
 })
+
+test('renderAppraisal shows period as dates, not timestamps', () => {
+  const a = { ...appraisal, period: { start: '2026-07-01T00:00:00+10:00', end: '2027-07-29T23:59:59+10:00' } }
+  const out = renderAppraisal(alex, { status: 'ok', data: a })
+  assert.match(out, /2026-07-01 → 2027-07-29/)
+})
+
+test('renderAppraisal hides template guidance on question items but keeps IDP descriptions', () => {
+  const a: Appraisal = { ...appraisal, sections: appraisal.sections.map(s => s.key === 'goals'
+    ? { ...s, items: s.items.map(i => ({ ...i, description: 'TEMPLATE GUIDANCE' })) } : s) }
+  const out = renderAppraisal(alex, { status: 'ok', data: a })
+  assert.doesNotMatch(out, /TEMPLATE GUIDANCE/)
+  assert.match(out, /Lead a review/)
+})

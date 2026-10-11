@@ -10,6 +10,7 @@
 .claude/skills/
 
 # Machine-specific config
+config/people.local.json
 .mcp.json
 .claude/settings.local.json
 .env.local

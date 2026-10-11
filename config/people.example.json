@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "bloom": { "baseUrl": "https://<tenant>/cobra/api/tms/api/performance/v1" },
+  "people": [
+    {
+      "id": "alex",
+      "name": "Alex Example",
+      "aliases": ["al"],
+      "relationship": "report",
+      "squads": ["mobfe"],
+      "github": "alexexample-org",
+      "jira": "Alex Example",
+      "bloom": { "FY27": 1234 }
+    },
+    {
+      "id": "sam",
+      "name": "Sam Sample",
+      "relationship": "team",
+      "github": null,
+      "jira": "Sam Sample"
+    }
+  ]
+}

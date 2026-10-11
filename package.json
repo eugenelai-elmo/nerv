@@ -6,6 +6,7 @@
     "nerv": "./bin/nerv"
   },
   "scripts": {
+    "test": "tsx --test 'lib/**/*.test.ts'",
     "nerv": "./bin/nerv",
     "test": "npx tsx --test lib/*.test.ts",
     "score": "npx tsx spikes/jev-sprint-scorer.ts",

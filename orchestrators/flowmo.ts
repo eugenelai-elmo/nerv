@@ -1,28 +1,25 @@
-import type { Orchestrator, OrchestratorContext, OrchestratorResult } from '../lib/types.js'
+import type { Orchestrator } from '../lib/types.js'
+import type { Mode } from '../lib/modes.js'
+import { isFlowmoRepo } from '../lib/flowmo-registry.js'
 
-const MODE_MAP: Record<string, string> = {
-  implement: 'delivery implement',
-  plan: 'delivery plan',
-  sync: 'delivery sync',
+const COMMAND: Partial<Record<Mode, string>> = {
+  plan: 'plan',
+  implement: 'implement',
+  intake: 'sync',
 }
 
 const orchestrator: Orchestrator = {
   name: 'flowmo',
-  modes: Object.keys(MODE_MAP),
-  defaultMode: 'implement',
 
-  resolve(ctx: OrchestratorContext): OrchestratorResult {
-    const mode = this.modes.includes(ctx.mode) ? ctx.mode : this.defaultMode
-    const subcommand = MODE_MAP[mode]
+  async supports(mode, input, repo) {
+    if (!COMMAND[mode]) return `no ${mode} step`
+    if (!input.ticket) return 'needs a ticket key'
+    if (!(await isFlowmoRepo(repo.name))) return `${repo.name} not in flowmo related-repos`
+    return true
+  },
 
-    return {
-      via: this.name,
-      mode,
-      action: 'invoke-skill',
-      skill: 'flowmo',
-      skillArgs: `${subcommand} ${ctx.task}`,
-      context: { ...ctx, mode, via: this.name },
-    }
+  async resolve(mode, input) {
+    return { kind: 'invoke', invocation: `/flowmo ${COMMAND[mode]} ${input.ticket}` }
   },
 }
 

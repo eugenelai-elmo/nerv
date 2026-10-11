@@ -5,6 +5,7 @@
 .claude/worktrees
 .claude/schemas
 .claude/related-repos.json
+.claude/related-repos.local.json
 .claude/flowmo.config.json
 .claude/skills/
 
@@ -21,6 +22,10 @@ memories/
 
 # Python venv (Laya service)
 services/.venv/
+services/__pycache__/
+
+# Exported decision/training data (local, may contain prompt text)
+training-data/
 
 # Node
 node_modules/

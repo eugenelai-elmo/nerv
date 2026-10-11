@@ -1,63 +1,57 @@
-import { resolveProvider } from './resolve-provider.js'
+import { resolveAndCall } from './resolve-provider.js'
 import { trace, now } from './trace.js'
 import type { SessionInfo, SessionProvider } from './types.js'
 
-async function getProvider(): Promise<SessionProvider> {
-  return resolveProvider<SessionProvider>('session')
+function call<R>(invoke: (p: SessionProvider) => Promise<R>) {
+  return resolveAndCall<SessionProvider, R>('session', invoke)
 }
 
 export async function listSessions(): Promise<SessionInfo[]> {
-  const start = performance.now()
-  const provider = await getProvider()
-  const sessions = await provider.list()
+  const { result: sessions, providerName, latencyMs } = await call(p => p.list())
   await trace({
     ts: now(),
     hook: 'session.list',
     layer: 'L3:Session',
-    provider: provider.name,
-    latencyMs: Math.round(performance.now() - start),
+    provider: providerName,
+    latencyMs,
     result: `${sessions.length} workspaces`,
   })
   return sessions
 }
 
 export async function createSession(label: string): Promise<SessionInfo> {
-  const start = performance.now()
-  const provider = await getProvider()
-  const session = await provider.create(label)
+  const { result: session, providerName, latencyMs } = await call(p => p.create(label))
   await trace({
     ts: now(),
     hook: 'session.create',
     layer: 'L3:Session',
-    provider: provider.name,
-    latencyMs: Math.round(performance.now() - start),
+    provider: providerName,
+    latencyMs,
     result: `created ${session.workspaceId}`,
   })
   return session
 }
 
 export async function attachSession(workspaceId: string): Promise<void> {
-  const provider = await getProvider()
-  await provider.attach(workspaceId)
+  const { providerName, latencyMs } = await call(p => p.attach(workspaceId))
   await trace({
     ts: now(),
     hook: 'session.attach',
     layer: 'L3:Session',
-    provider: provider.name,
+    provider: providerName,
+    latencyMs,
     result: workspaceId,
   })
 }
 
 export async function sessionStatus(): Promise<{ running: boolean; socketPath: string }> {
-  const start = performance.now()
-  const provider = await getProvider()
-  const status = await provider.status()
+  const { result: status, providerName, latencyMs } = await call(p => p.status())
   await trace({
     ts: now(),
     hook: 'session.status',
     layer: 'L3:Session',
-    provider: provider.name,
-    latencyMs: Math.round(performance.now() - start),
+    provider: providerName,
+    latencyMs,
     result: status.running ? 'running' : 'stopped',
   })
   return status

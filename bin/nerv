@@ -17,6 +17,8 @@ usage() {
 nerv — NERV command seat
 
 Commands:
+  dev <target> [ticket|intake|plan|implement|refresh|ship] <task>
+                                  Orchestrated development — name the target (mobile, frontend, flowmo, …)
   mobile [check|start|stop|dev]   Mobile dev environment & orchestrated development
   loadout [search|sources|local]  Skill discovery
   decide [list|<name>]            On-demand decision scoring via Jev/Laya
@@ -31,6 +33,7 @@ cmd="${1:-}"
 shift 2>/dev/null || true
 
 case "$cmd" in
+  dev)      exec npx tsx commands/dev.ts "$@" ;;
   mobile)   exec npx tsx commands/mobile.ts "$@" ;;
   loadout)  exec npx tsx commands/loadout.ts "$@" ;;
   decide)   exec npx tsx commands/decide.ts "$@" ;;

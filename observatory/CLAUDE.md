@@ -270,13 +270,14 @@ Report as a prioritised list: critical (security, EOL), important (major version
 
 ### LaunchDarkly (REST API v2)
 ```bash
-curl -s -H "Authorization: $LD_API_KEY" "https://app.launchdarkly.com/api/v2/..."
+curl -s -H "Authorization: $LD_API_KEY" -H "LD-API-Version: 20240415" "https://app.launchdarkly.com/api/v2/..."
 ```
-- Token: `LD_API_KEY` in elmo-application `.env.local`
-- Primary projects: `platform` (104 flags), `hr-core`, `hr-lab`, `mobile`
+- Token: `LD_API_KEY` in elmo-frontend `.env.local`
+- Always send `LD-API-Version: 20240415`; flag lists page at 100 max (`limit`/`offset`), so page or you miss flags
+- Primary projects: `platform` (124 flags), `hr-core`, `hr-lab`, `mobile`
 - Environments: `production`, `test` (staging), `development`
 - Use for: checking flag state before/after deploys, finding stale flags, flag audit trail
-- Full skill at `elmo-application/.claude/skills/launchdarkly/skill.md`
+- Full skill (endpoints, paging, audit spec) at `elmo-frontend/.claude/skills/launchdarkly/skill.md`
 
 ### Git repos (workspace access)
 - `/Users/eugene.lai/Projects/elmo-application` — frontend monorepo

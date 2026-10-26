@@ -33,7 +33,7 @@ When working on `elmo-application` code from this seat, follow these rules (sour
 - **Permissions**: `@eff/capabilities` only. Never check `metadata?.actions` directly. `<Can I="action" a="resource">`.
 - **Tasks**: Run via nx (`pnpm nx run …`), not the underlying tool directly.
 - **E2E**: Playwright + `playwright-bdd`. `.feature` files under `e2e/features/`, steps under `e2e/steps/`.
-- **Repository**: Bitbucket, not GitHub. Don't assume GitHub-specific features.
+- **Repository**: GitHub (`elmo-software` org). Repos migrated from Bitbucket in Oct 2026.
 - **Code review**: Use `/eff:review` skill for any review request.
 
 ## Rules

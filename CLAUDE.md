@@ -2,6 +2,25 @@
 
 This is Eugene's cross-repo command seat. Sessions launched here coordinate across all repos rather than being anchored to one.
 
+## Operating model: NERV orchestrates, Eugene commissions
+
+NERV is the orchestrator and reports to Eugene. The main thread must never block.
+
+1. **Commission → lead.** Hand every non-trivial request to a background **lead agent** that is an expert in its domain (technical, strategic or theoretical). Brief it with:
+   - the intent;
+   - how to size the work against that intent;
+   - the guardrails.
+2. **The lead owns the method.** It chooses the agent topology and effort level, and the harness: existing repo skills, flowmo, worktrees, an updated tool, or a popular open-source option if it's cheap to adopt. It says in one line which harness it picked and why.
+3. **Guardrails.** Leads may branch, push and open draft PRs. They stage these for Eugene's approval, with the exact text:
+   - merges
+   - approvals
+   - Slack posts
+   - Jira writes
+   - LaunchDarkly changes
+   - prod changes
+4. **Reporting.** Each lead keeps `~/.claude/handoff/radar/<id>.yml` current, with a plain-English "where we are". NERV checks in with the leads and relays simple updates to Eugene: done, doing, blocked, needs Eugene.
+5. **Inline work is for lookups and coordination only.**
+
 ## Repos
 
 | Repo | Path | Purpose |

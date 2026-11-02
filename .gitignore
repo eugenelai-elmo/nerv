@@ -37,3 +37,10 @@ observatory/.env.local
 observatory/state/
 observatory/.claude/projects/
 .playwright-mcp/
+
+# Machine-local tool state (nodeterm canvas, sprintmo ticket drafts)
+.nodeterm/
+.sprintmo/
+
+# Rendered demo media (MP4/GIF/PNG) — re-render from source
+demos/*/out/

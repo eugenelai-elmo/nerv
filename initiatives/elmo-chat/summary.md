@@ -103,7 +103,29 @@ Langfuse: native OTEL from agentgateway (config-only) — collection from onset
 - Token budgets: per-tenant ceiling. Product decision: per-tenant? Per-user? Plan add-on?
 - Cost attribution: virtual keys (per-tenant) + Langfuse OTEL (per-conversation)
 
-## Current State (22 Sep 2026)
+## Current State (29 Sep 2026)
+
+**29 Sep — Chat API LIVE ON STAGING (DP announcement):**
+- Chat API (`elmo-chat-service`) fully built and deployed to staging. POC graduated to production-shape service.
+- E2e conversations completing cleanly on staging via external-connector path (Glean).
+- In-app path (Kong session → Chat API) blocked by PLA-6714 only — DP's three services (Chat API, MCP gateway, HR Core MCP) are code-complete and cutover-ready. When PLA-6714 lands, switching is a config change, not a release.
+- **What's built:** live HR data queries (not documents), user-scoped permissions through every layer, write approval cards (unforgeable, audit-trailed), honest error handling (no hallucination on backend faults), AG virtual keys for LLM (Bedrock), Redis-backed state, OTEL/Langfuse tracing, per-tenant enablement, rate/concurrency/token limits, eval harness on every code change.
+- HR Core MCP: 5 tools (search_employees, get_employee, get_org_chart, get_my_personal_details, update_personal_details behind flag). Verified against staging data.
+
+**28 Sep — PLA-6714 root cause confirmed (DP + Dave):**
+- Kong oidc-multitenant forwards the ID token (enc_id_token) downstream, not the access token.
+- TMS oauth2 mount at `/api/elmo-oauth2/` expects `internal_access_token` claim — ID token doesn't carry it → uncaught 500.
+- Affected endpoints: employee-search, get employee, summary, personalDetails — all GETs, all the calls HR Core MCP makes.
+- Web app unaffected (uses session firewall, never the oauth2 mount).
+- Dave's fix: "dual-map" approach — TMS needs user-facing routes for these employee APIs alongside the oauth2-mount routes. Dave writing the ticket for PLA.
+- DP can re-verify within minutes of the fix landing.
+
+**25 Sep — Infrastructure delivered (Aaron, INF-6051 Done):**
+- AG virtual keys: dev/staging/prod (mode: Strict, scoped to au.anthropic.claude-sonnet-4-6)
+- ElastiCache (Redis): dev + staging provisioned
+- Langfuse: self-hosted on elmo-shared (MIT OSS, no license). RDS Postgres + S3 + ClickHouse, all ap-southeast-2. Keycloak SSO. Content capture OFF (metadata only).
+- Kong routes: `/api/elmo-chat/*` live on dev + staging
+- Prod secrets: credentials seeded, app config (JWKS domains, MCP URLs) pending first prod deploy. No prod tenant enabled.
 
 **22 Sep — Auth story RESOLVED for Chat (Dave Newson):**
 - **AG can't natively validate multi-tenant JWTs.** Confirmed. TMS issues one `kid` across ~500 per-tenant issuers; AG selects by `kid` first → rejects 499. Static-loading all tenant JWKS is a non-starter.
@@ -171,11 +193,12 @@ Josh 14 Sep: If AG auth isn't solved by Oct, Orchestrator ships. K1 board wants 
 
 ## Blockers / Open
 
-- **Chat API ownership** — asked DP if his team takes the build. Awaiting answer. Determines Q2 planning.
-- **Chat API on staging** — nothing deployable in `elmo-chat-service` (gutted). DP's POC (`elmo-ai-chat-assistant`) is the only working backend. Needs deploying + Kong route for Oct blitz.
-- ~~**Auth story** — AG over Orchestrator contingent. Dave Newson's court. If not solved by Oct, Orchestrator wins by default.~~ **RESOLVED 22 Sep.** AG + `ext_authz` for Chat. JWT passthrough, each layer validates. No Orchestrator fallback needed. Public MCP auth (scopes, kid, PKCE) deferred — not blocking Chat.
-- **ext_authz service** — needs building. Thin JWT/JWKS validator for AG. Scope TBD (who builds, where it lives).
-- **Keycloak** — affects external MCP path only (Claude Desktop, Glean). Chat path through Kong unaffected.
+- ~~**Chat API ownership**~~ **RESOLVED 15 Sep.** DP's team (Marketplace) confirmed as Chat API owners.
+- ~~**Chat API on staging**~~ **RESOLVED 29 Sep.** Chat API live on staging, e2e via Glean path. Code-complete.
+- ~~**Auth story**~~ **RESOLVED 22 Sep.** Orchestrator ships for now. AG + `ext_authz` is the future path. Nick Shelswell owns cost-value assessment for AG migration. Public MCP auth (scopes, kid, PKCE) deferred — not blocking Chat.
+- **PLA-6714 (ACTIVE BLOCKER)** — Kong forwards ID token instead of access token on session path. TMS oauth2 mount rejects it (missing `internal_access_token` claim → 500). Dave prescribed "dual-map" fix: add user-facing routes for employee APIs. Blocks in-app Chat → MCP lane only. External path (Glean) unaffected. DP can re-verify within minutes of fix landing.
+- **FE integration** — Chat panel needs wiring to `/api/elmo-chat/*`. Contract documented (repo docs + Confluence). Server-side live and testable. Jayz to start.
+- **Golden question set** — Maulik/Anupam owe product eval criteria for the quality harness. Machinery built, content gap.
 - **menu-ext integration** (ESL-4164) — legacy TMS pages need Ask ELMO. Separate from SPA path.
 - **frontendElmoChat flag** — needs creating in LaunchDarkly dashboard.
 

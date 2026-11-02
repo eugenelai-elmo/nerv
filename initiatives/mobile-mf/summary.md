@@ -50,9 +50,15 @@ Confluence is the right place for the written confirmations (system of record, l
 - Raygun + Firebase Analytics continue. Add metadata tags for ELMO vs standalone.
 - Intercom OFF day one. No ELMO mobile observability yet (Elastic lacks RN SDK).
 
-### Theming — GREEN LIT (14 Sep)
-- Approved. Needs Ramesh's input still.
-- Ralph working on public theming API extension. flasum acknowledged AUSMOB-14.
+### Theming — DONE, LIVE ON MASTER (verified 29 Sep)
+- Full pipeline live: ELMO API → RG BE → RG GraphQL → RG client → 24 themed screens.
+- LMS-1227 (ELMO API extension, `rotageekMobileTheme` sub-property) — In-Test.
+- LMS-1261 (RG BE → RG GraphQL) — ticket still To Do but work is DONE. PR #1677 merged to master. Ticket hygiene only.
+- LMS-1207 (client consume via ThemeProvider) — PO Walkthrough (done, in review).
+- LMS-1180 (design audit & regression) — Done. LMS-1263 (logo delivery) — Done.
+- GraphQL query fetches `theme { ...Theme }` at bootstrap via `getGroupTheme()`.
+- Token shape matches LMS-1198 spec: action, border, link, nav, selection, status, surface, text + assets.
+- Uni-styles deferred this quarter; committed sprint 1 next quarter (Oct 1). Greg + flasum agreed (15 Sep). Requires RG regression testing.
 
 ### Versioning — AGREED IN PRINCIPLE
 - Pin to major (v12, v13): auto-minor bug fixes, manual for RN upgrades.
@@ -90,7 +96,7 @@ Confluence is the right place for the written confirmations (system of record, l
 ## Dependencies on UK Team (Q2)
 - Frontdoor auth endpoint (flasum confirmed, needs Ola's design doc)
 - Platform enum extension on push mutation (flasum confirmed, trivial)
-- Theming GQL shape update (AUSMOB-14, timeline coming)
+- ~~Theming GQL shape update~~ — DONE, merged to master (PR #1677, verified 29 Sep)
 
 ## Risks
 - **Zephyr runtime dependency** — if version resolution calls home, it's a production dependency with no SLA on Team plan. Answers pending.

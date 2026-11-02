@@ -142,6 +142,41 @@ App never calls vendor APIs directly. Two backend engines behind a unified proxy
 | Delivery Plan | [Artifact](https://claude.ai/code/artifact/51b21e33-b1c9-45e4-801c-a2868c9f6aa1) — Maulik's product timeline (still active) |
 | Design Q&A | [Confluence](https://elmolearning.atlassian.net/wiki/spaces/FF/pages/4866540225) — Zeynep's running decisions log |
 
+### Weekly Pulse
+
+#### 28 Sep 2026
+
+| Area | | Status |
+|---|---|---|
+| **Overall** | 🟡 | API shipping, mobile FE not started, cross-team deps aging |
+| **API (backend)** | 🟢 | ~8 PRs since 17 Sep. List, detail, PDF download, KeyPay totals, paid-date filter all up. 13k+ tests, 100% coverage. |
+| **Mobile FE** | 🟡 | Not started. Charith set up app locally ahead of schedule. Scaffolding next. |
+| **Design** | 🟢 | Mobile hi-fi in review (HPI-1829). Web payslips design kicked off (Zeynep, new Q&A page 21 Sep). |
+| **Cross-team deps** | 🔴 | Cobra route (PLA-6712, Pum) 11+ days open. OAuth scope (HPI-1806, Dennis) 35+ days open. Both have workarounds but can't ship to prod. |
+| **Leave extension** | 🟡 | PROVISIONAL in Big Rocks. MicroPay mapped — 4 structural gaps. Leave PRD still missing from Maulik. |
+
+**Shipped this period:** MicroPay PDF download (PR #51), paid-date range filter (PR #58, breaking — paidFrom/paidTo), MicroPay capability descriptor (PR #48), payslip list (PR #47), payslip detail (PR #34), KeyPay identity resolver (PR #36), interim Cobra alias (PR #53), interim OAuth scope (PR #42).
+
+**Blockers waiting on others:**
+- PLA-6712 (Cobra route) — Pum — 11+ days — blocks staging e2e
+- HPI-1806 (OAuth scope) — Dennis — 35+ days — blocks production
+- QR code access — Platform — payslip-only customers can't get into the app
+- Feature flags — Eugene — payslip flags needed in mobile app
+- Leave PRD — Maulik — scope decisions for MicroPay leave
+
+**Risks:**
+- MicroPay within Q2 flagged unrealistic by Charith (posted in channel 21 Sep)
+- Code freeze ~14 Dec, leave extensions before Christmas unlikely
+- Redis cache bug (HPI-1826) still To Do — payday burst risk
+- MicroPay notifications need spike even though answers received from vendor
+
+**Eugene's actions:**
+- Chase Pum (Cobra) + Dennis (OAuth) — escalate if no movement
+- Nudge Maulik on leave PRD scope
+- Implement payslip feature flags in mobile app
+
+---
+
 ### Weekly Sync Protocol
 
 Baked into the engineering hub artifact. Pre-sync: check gates, blockers, handover readiness, cross-team deps, mobile epic shape. Post-sync: update the artifact.

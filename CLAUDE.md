@@ -11,6 +11,14 @@ NERV is the orchestrator and reports to Eugene. The main thread must never block
    - how to size the work against that intent;
    - the guardrails.
 2. **The lead owns the method.** It chooses the agent topology and effort level, and the harness: existing repo skills, flowmo, worktrees, an updated tool, or a popular open-source option if it's cheap to adopt. It says in one line which harness it picked and why.
+   - **Leads delegate.** A lead runs independent work in parallel subagents instead of queuing it. NERV sends a new side question to a separate agent, never to a busy lead.
+   - **Caps.** Eugene often runs several Claude sessions at once, so keep the machine light:
+     - at most 3 concurrent subagents per lead;
+     - one nesting level (subagents don't spawn further agents);
+     - at most 1 headless browser and 1 nx build/test at a time per lead;
+     - symlink `node_modules` into worktrees instead of installing;
+     - short request timeouts (≤20s) so environment hangs fail fast.
+   - **Gate size matches change size.** A small change covered by review and CI gets no heavy check on the critical path.
 3. **Guardrails.** Leads may branch, push and open draft PRs. They stage these for Eugene's approval, with the exact text:
    - merges
    - approvals

@@ -1,5 +1,12 @@
 ## Preview Deploys — Branch Previews for elmo-frontend
 
+> **Current design: v2 (5 Nov 2026)**, see [`design-v2.md`](design-v2.md). Diagram: https://claude.ai/artifact/NQcB5Zr7yBA7eGmwsZ6zf2
+>
+> A link on any elmodev tenant sets the cookie `x-preview=platform=<ref>&<remote>=<ref>`. The router serves the chosen host page straight from the artifacts bucket (`elmo-s-apse2-fe-artifacts-s3`). A new staging-only CloudFront path `/__artifacts/*` serves every chunk and remote from the same bucket. A small host plugin switches the chosen remotes. There is no copying, no manifest file, no LaunchDarkly flag and no prod change. DevOps asks: the `/__artifacts/*` behaviour plus OAC on the 5 elmodev distributions (tms-er-cf, gated by a variable), a bucket-policy read for those distributions, and a 14-day lifecycle on `pr/`.
+> Spike evidence is in [`poc-findings.md`](poc-findings.md), including the bert live test that passed on 5 Nov. **Everything below this line is the superseded v1 design (`__preview/` prefix rewrite), kept for history.** The v1 "rewrite every URI" approach would break TMS and APIs; see poc-findings M3.
+
+---
+
 **Goal:** Let any contributor preview their branch's frontend code without deploying to shared staging. A reviewer opens the app with a cookie set and sees the branch build instead of production.
 
 **Why now:** Multiple contributors have asked for branch previews. The current model (staging-only) is inherited from the old satellite Frontend team structure, where a small team shared one staging slot. With CODEOWNERS and higher PR throughput post-GitHub-migration, the bottleneck on staging previews is increasingly painful. Eugene flagged this as a top FE platform pain point to NingNing (Sep 2026).
@@ -8,7 +15,7 @@
 
 **Jira:** [ESL-4192](https://elmolearning.atlassian.net/browse/ESL-4192) (Story, Open). Related: ESL-3726 (MF override query param — different mechanism, narrower scope).
 
-**Status:** Design done + architecture review complete (Oct 2026). Cache poisoning gap found and resolved in revised design. Eugene spikes the CF Function + Lambda@Edge patch before handing off.
+**Status (v1, superseded):** Design done + architecture review complete (Oct 2026). Cache poisoning gap found and resolved in revised design. Eugene spikes the CF Function + Lambda@Edge patch before handing off.
 
 **Since:** 2026-09-01
 

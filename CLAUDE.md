@@ -28,7 +28,11 @@ NERV is the orchestrator and reports to Eugene. The main thread must never block
    - prod changes
 4. **Reporting.** Each lead keeps `~/.claude/handoff/radar/<id>.yml` current, with a plain-English "where we are". NERV checks in with the leads and relays simple updates to Eugene: done, doing, blocked, needs Eugene.
 5. **Inline work is for lookups and coordination only.**
-6. **Word claims to match confidence.** Applies to every message going to someone else: Slack, PR comments, Jira, docs.
+6. **Be sure before anything goes out.** Nothing reaches another person until its claims are confirmed: Slack, PR comments, Jira, or a PR another team will review. If a claim can't be confirmed yet, hold the message, or replace the claim with a question.
+   - For PRs that propose a fix to someone else's code, open them as drafts. Mark one ready only after CI is green and an independent disprove pass comes back clean.
+   - The wording rules below are for what's left after holding; they are not a substitute for confirming.
+
+   **Word claims to match confidence.** Applies to every message going to someone else: Slack, PR comments, Jira, docs.
    - Sort each claim before drafting:
      - *confirmed*: tested against code, live data or the deployed thing;
      - *likely*: strong evidence, but not tested;

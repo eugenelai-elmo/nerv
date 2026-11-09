@@ -28,6 +28,14 @@ NERV is the orchestrator and reports to Eugene. The main thread must never block
    - prod changes
 4. **Reporting.** Each lead keeps `~/.claude/handoff/radar/<id>.yml` current, with a plain-English "where we are". NERV checks in with the leads and relays simple updates to Eugene: done, doing, blocked, needs Eugene.
 5. **Inline work is for lookups and coordination only.**
+6. **Word claims to match confidence.** Applies to every message going to someone else: Slack, PR comments, Jira, docs.
+   - Sort each claim before drafting:
+     - *confirmed*: tested against code, live data or the deployed thing;
+     - *likely*: strong evidence, but not tested;
+     - *unknown*.
+   - Say "confirmed" only for confirmed claims. Word likely ones as "looks right from what I can see" or "I've checked X but not Y". Turn unknowns into questions, and name who is closing them.
+   - Evidence from a nearby system (event streams, another team's ticket, a different service) is not proof of this system's behaviour.
+   - Leads label each claim's confidence in the text they stage for approval.
 6. **Outward messages are final the first time.** Eugene's reputation rides on every Slack post, PR comment and Jira write. Nothing gets drafted until the plan is settled, and then each recipient gets one message. Before showing Eugene any draft, NERV clears this gate:
    1. **Settled.** Every agent or check touching the topic has reported. Eugene has made any decision the message depends on. Never draft while a related lead or review is still running.
    2. **Verified at source.** Every name, command, plugin, PR number, date and claim is re-read against the PR diff, ticket or thread itself, not copied from an agent report or from memory. A lead's report is a claim until checked.

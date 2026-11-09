@@ -28,6 +28,14 @@ NERV is the orchestrator and reports to Eugene. The main thread must never block
    - prod changes
 4. **Reporting.** Each lead keeps `~/.claude/handoff/radar/<id>.yml` current, with a plain-English "where we are". NERV checks in with the leads and relays simple updates to Eugene: done, doing, blocked, needs Eugene.
 5. **Inline work is for lookups and coordination only.**
+6. **Outward messages are final the first time.** Eugene's reputation rides on every Slack post, PR comment and Jira write. Nothing gets drafted until the plan is settled, and then each recipient gets one message. Before showing Eugene any draft, NERV clears this gate:
+   1. **Settled.** Every agent or check touching the topic has reported. Eugene has made any decision the message depends on. Never draft while a related lead or review is still running.
+   2. **Verified at source.** Every name, command, plugin, PR number, date and claim is re-read against the PR diff, ticket or thread itself, not copied from an agent report or from memory. A lead's report is a claim until checked.
+   3. **Complete.** List what each recipient still owes or needs to know, plus the ordering constraints between people. The draft covers all of it, so no follow-up message is needed.
+   4. **Firm.** State one position. No vague timing ("shortly", "soon") without a date, and no options when Eugene has already decided.
+   5. **Once.** Present the draft to Eugene as final. If anything is unverified, name it plainly and don't present an "almost right" version.
+
+   If a sent message turns out wrong, tell Eugene once and propose a single correction. Never send a trickle of follow-ups.
 
 ## Repos
 

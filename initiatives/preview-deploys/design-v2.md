@@ -38,10 +38,16 @@ DevOps adds one CDN path, one bucket permission and one cleanup rule. We build e
 ```
 1. Click  https://acme.elmodev.com/__preview/on?platform=<shaA>&contracts=<shaB>
    router: each sha must be 40 hex and each name a known project;
-           HeadObject pr/<p>/<sha>/<entry>, then <p>/<sha>/<entry>
+           a build is complete only when [pr/]platform/<sha>/deploy-manifest.json exists
+           (written last by CI) and lists the remote (host: index.html exists too)
            -> any missing: "Preview not found" page (404) naming it, Exit link
-           -> all found: Set-Cookie x-preview=platform=pr/platform/<shaA>&contracts=contracts/<shaB>
-                         (Secure; SameSite=Lax; Path=/; Max-Age=28800), 302 to /
+           -> S3 error: "Preview unavailable" (503)
+           -> all found (GET): confirm page "Start preview?" (no cookie; not frameable)
+   user clicks Start: same-origin POST /__preview/on?... (Origin must be https://<host>)
+           -> Set-Cookie __Host-x-preview=platform=pr/platform/<shaA>&contracts=contracts/<shaB>
+              (Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800), 303 to /
+   (20 Nov hardening after the disprove pass: a cross-site link alone can't start a preview,
+    and a sibling *.elmodev.com site can't plant or shadow the cookie.)
 2. GET /dashboard (default behaviour, uncached, router runs)
    cookie has platform -> GetObject <ref>/index.html (memory cache by ref)
                           rewrite "/_next/  ->  "/__artifacts/<ref>/_next/
@@ -58,7 +64,7 @@ DevOps adds one CDN path, one bucket permission and one cleanup rule. We build e
 
 ### Cookie and link spec
 
-- **Name:** `x-preview`. Host-only (no `Domain`), `Path=/`, `Secure`, `SameSite=Lax`, `Max-Age=28800` (8 h). Not `HttpOnly`, because the browser code reads it.
+- **Name:** `__Host-x-preview`. Host-only (no `Domain`), `Path=/`, `Secure`, `HttpOnly`, `SameSite=Lax`, `Max-Age=28800` (8 h). The browser code reads the injected `window.__ELMO_PREVIEW__`, never the cookie.
 - **Value:** a query string, e.g. `platform=pr/platform/<sha>&contracts=contracts/<sha>`. Every value matches `^(pr/)?<project>/[0-9a-f]{40}$`, where `<project>` equals the key and is one of `platform` or the 8 remotes. Anything else invalidates the whole cookie, which then counts as no preview. The worst case is 9 entries, about 600 bytes.
 - **Link (`/__preview/on`):** takes the same keys with bare 40-hex shas. The router resolves `pr/` vs master layout once, at link time, and writes the resolved refs. Link and cookie therefore have one format, and the runtime never guesses.
 - **Hosts:** only `*.elmodev.com`. The router ignores the cookie everywhere else, so prod is inert by construction (tested in the spike).

@@ -53,6 +53,7 @@ NERV is the orchestrator and reports to Eugene. The main thread must never block
 
 The goal is low mental bandwidth: Eugene should grok it in one pass, and learn the real terms while doing so.
 
+- **Two depths, intern level first.** For any explanation, open with a short "**In short:**" block written so a new intern could follow it: no jargon, an everyday analogy, and what it means for Eugene. Then give the regular explanation below it. Eugene picks how deep to read. Skip the intern block only for one-line answers and pure status updates.
 - **Plain words first, the technical term alongside.** For example: "the rule that lets Performance pages call the chat API (a CORS allow-list)". Never use only one of the two.
 - **Lead with what it means for him:** what changes, what's blocked, and what he needs to do. Mechanism comes after, and only if it helps.
 - **One idea per sentence.** Use short bullets. Use an analogy when a concept is new to him.
